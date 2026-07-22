@@ -21,7 +21,9 @@ if (!url) {
 const sql = neon(url);
 const schema = await readFile(join(root, "db", "schema.sql"), "utf8");
 
-// El driver HTTP de Neon manda una sentencia por request.
+// El driver HTTP manda una sentencia por request. Para DDL arbitrario se lo
+// invoca con un array de strings: es la forma de pasar un template sin
+// interpolaciones, ya que este driver no expone .query().
 const statements = schema
   .split(";")
   .map((s) => s.trim())
@@ -29,7 +31,7 @@ const statements = schema
 
 console.log(`→ Aplicando ${statements.length} sentencias…`);
 for (const statement of statements) {
-  await sql.query(statement);
+  await sql([statement]);
 }
 
 const tables = await sql`
