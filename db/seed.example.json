@@ -1,0 +1,104 @@
+{
+  "exportedAt": "2026-01-15T12:00:00.000Z",
+  "vehicles": [
+    {
+      "id": "1000000000001",
+      "name": "Furgón Norte",
+      "plate": "AA 123 BB",
+      "brand": "Ford",
+      "model": "Transit",
+      "year": "2021",
+      "initialKm": 80000,
+      "colorIdx": 0
+    },
+    {
+      "id": "1000000000002",
+      "name": "Pickup Sur",
+      "plate": "AB 456 CD",
+      "brand": "Renault",
+      "model": "Oroch",
+      "year": "2020",
+      "initialKm": 45000,
+      "colorIdx": 1
+    }
+  ],
+  "expenses": [
+    {
+      "id": "2000000000001",
+      "vehicleId": "1000000000001",
+      "type": "combustible",
+      "fuelType": "super",
+      "amount": 102032,
+      "date": "2026-01-05",
+      "km": 80420,
+      "note": "",
+      "liters": 50
+    },
+    {
+      "id": "2000000000002",
+      "vehicleId": "1000000000001",
+      "type": "service",
+      "fuelType": null,
+      "amount": 185000,
+      "date": "2026-01-12",
+      "km": 0,
+      "note": "Service de 80.000 km",
+      "liters": 0
+    },
+    {
+      "id": "2000000000003",
+      "vehicleId": "1000000000002",
+      "type": "combustible",
+      "fuelType": "gnc",
+      "amount": 22415,
+      "date": "2026-01-08",
+      "km": 45310,
+      "note": "",
+      "liters": 20
+    },
+    {
+      "id": "2000000000004",
+      "vehicleId": "1000000000002",
+      "type": "seguro",
+      "fuelType": null,
+      "amount": 74500,
+      "date": "2026-01-10",
+      "km": 0,
+      "note": "Cuota mensual",
+      "liters": 0
+    }
+  ],
+  "odometer": [
+    {
+      "id": "3000000000001",
+      "vehicleId": "1000000000001",
+      "km": 81200,
+      "date": "2026-01-31",
+      "note": "Cierre de mes"
+    },
+    {
+      "id": "3000000000002",
+      "vehicleId": "1000000000002",
+      "km": 45890,
+      "date": "2026-01-31",
+      "note": "Cierre de mes"
+    }
+  ],
+  "fuelPrices": {
+    "gnc": 821.07,
+    "super": 1494.97,
+    "gasoil": 1665.25,
+    "eurodiesel": 1781.77
+  },
+  "fuelTypes": [
+    { "id": "gnc", "label": "GNC", "dot": "var(--fuel)" },
+    { "id": "super", "label": "Super", "dot": "var(--service)" },
+    { "id": "gasoil", "label": "Gasoil", "dot": "var(--repair)" },
+    { "id": "eurodiesel", "label": "Eurodiesel", "dot": "var(--v5)" }
+  ],
+  "fuelHistory": [],
+  "taxes": [
+    { "id": "iva", "label": "IVA", "pct": 21 },
+    { "id": "otro", "label": "Otro impuesto", "pct": 15.5 }
+  ]
+}

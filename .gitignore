@@ -19,3 +19,6 @@ yarn-error.log*
 !.vscode/extensions.json
 .idea
 .env*
+
+# El seed real tiene patentes e importes reales: no se versiona.
+db/seed.json

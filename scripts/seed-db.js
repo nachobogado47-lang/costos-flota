@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 /**
- * Carga un export de la app en la base. Por defecto usa db/seed.json.
+ * Carga un export de la app en la base.
  *
  *   DATABASE_URL="postgres://…" node scripts/seed-db.js [ruta.json]
+ *
+ * Sin argumento usa db/seed.json si existe y, si no, db/seed.example.json.
+ * El seed real no se versiona: contiene patentes e importes reales.
  *
  * Reemplaza todo el contenido de las tablas: pensado para la carga inicial
  * o para restaurar un backup completo.
  */
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,7 +25,12 @@ if (!url) {
   process.exit(1);
 }
 
-const file = process.argv[2] ? resolve(process.argv[2]) : join(root, "db", "seed.json");
+function defaultSeed() {
+  const real = join(root, "db", "seed.json");
+  return existsSync(real) ? real : join(root, "db", "seed.example.json");
+}
+
+const file = process.argv[2] ? resolve(process.argv[2]) : defaultSeed();
 const data = JSON.parse(await readFile(file, "utf8"));
 
 const {
