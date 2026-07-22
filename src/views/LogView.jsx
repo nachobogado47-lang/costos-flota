@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared";
 import { ExpenseRow } from "./ReportView";
 
-export function LogView({ vehicles, expenses, onNewExpense, onEditExpense, onDeleteExpense }) {
+export function LogView({ vehicles, expenses, fuelTypes, onNewExpense, onEditExpense, onDeleteExpense }) {
   if (expenses.length === 0) {
     return (
       <EmptyState
@@ -49,6 +49,7 @@ export function LogView({ vehicles, expenses, onNewExpense, onEditExpense, onDel
               e={e}
               vehicle={v}
               vehicleColor={v ? VCOLORS[v.colorIdx || 0] : undefined}
+              fuelTypes={fuelTypes}
               onEdit={() => onEditExpense(e)}
               onDelete={() => onDeleteExpense(e.id)}
             />

@@ -1,33 +1,80 @@
 import { useRef, useState } from "react";
 import {
-  Check, Database, Fuel, History, Pencil, Percent, Plus, TriangleAlert, Upload, X,
+  Check, Database, Fuel, History, Lock, Pencil, Percent, Plus, TriangleAlert, Upload, X,
 } from "lucide-react";
-import { FUEL_TYPES } from "@/theme";
+import { DOT_COLORS } from "@/theme";
 import { calcFinalPrice, todayISO } from "@/lib/calc";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip } from "@/components/ui/tooltip";
+
+/** Un id estable a partir del nombre, para que el gasto no dependa del label. */
+function slugify(label, taken) {
+  const base = label.trim().toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "combustible";
+  let id = base;
+  let n = 2;
+  while (taken.includes(id)) id = `${base}-${n++}`;
+  return id;
+}
 
 export function SettingsView({
-  fuelPrices, setFuelPrices, fuelHistory, setFuelHistory, taxes, setTaxes, toast, onImport,
+  fuelPrices, setFuelPrices, fuelTypes, setFuelTypes, expenses,
+  fuelHistory, setFuelHistory, taxes, setTaxes, toast, onImport,
 }) {
   const [editingPrices, setEditingPrices] = useState(false);
   const [draftPrices, setDraftPrices] = useState({ ...fuelPrices });
+  const [draftTypes, setDraftTypes] = useState(fuelTypes.map((t) => ({ ...t })));
   const [editingTaxes, setEditingTaxes] = useState(false);
   const [draftTaxes, setDraftTaxes] = useState(taxes.map((t) => ({ ...t })));
   const [importing, setImporting] = useState(false);
   const fileInput = useRef(null);
 
+  /** Cuántos gastos quedarían huérfanos si se quita un tipo. */
+  const usageOf = (id) => expenses.filter((e) => e.fuelType === id).length;
+
   function savePrices() {
-    const prices = Object.fromEntries(
-      Object.entries(draftPrices).map(([k, v]) => [k, Number(v) || 0]),
-    );
+    const clean = draftTypes
+      .map((t) => ({ ...t, label: t.label.trim() }))
+      .filter((t) => t.label);
+
+    if (!clean.length) {
+      toast("Dejá al menos un tipo de combustible.", "error");
+      return;
+    }
+
+    const prices = Object.fromEntries(clean.map((t) => [t.id, Number(draftPrices[t.id]) || 0]));
+
+    setFuelTypes(clean);
     setFuelPrices(prices);
     setFuelHistory((p) => [{ id: `${Date.now()}`, date: todayISO(), prices }, ...p]);
     setEditingPrices(false);
-    toast("Precios actualizados");
+    toast("Combustibles actualizados");
+  }
+
+  function startEditingPrices() {
+    setDraftPrices({ ...fuelPrices });
+    setDraftTypes(fuelTypes.map((t) => ({ ...t })));
+    setEditingPrices(true);
+  }
+
+  function addFuelType() {
+    const id = slugify("nuevo", draftTypes.map((t) => t.id));
+    setDraftTypes((p) => [...p, { id, label: "", dot: DOT_COLORS[p.length % DOT_COLORS.length] }]);
+    setDraftPrices((p) => ({ ...p, [id]: "" }));
+  }
+
+  function removeFuelType(id) {
+    const used = usageOf(id);
+    if (used > 0) {
+      toast(`No se puede quitar: hay ${used} ${used === 1 ? "gasto" : "gastos"} con ese combustible.`, "error");
+      return;
+    }
+    setDraftTypes((p) => p.filter((t) => t.id !== id));
   }
 
   function saveTaxes() {
@@ -71,12 +118,12 @@ export function SettingsView({
         <CardContent className="pt-5">
           <SectionHead
             icon={Fuel}
-            title="Precios de combustible"
-            desc="Precio base por litro, sin impuestos"
+            title="Combustibles"
+            desc={editingPrices ? "Agregá, renombrá o quitá tipos" : "Precio base por litro, sin impuestos"}
             action={
               !editingPrices ? (
-                <Button variant="outline" size="sm" onClick={() => { setDraftPrices({ ...fuelPrices }); setEditingPrices(true); }}>
-                  <Pencil />Actualizar
+                <Button variant="outline" size="sm" onClick={startEditingPrices}>
+                  <Pencil />Administrar
                 </Button>
               ) : (
                 <div className="flex gap-1.5">
@@ -89,47 +136,86 @@ export function SettingsView({
             }
           />
 
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {FUEL_TYPES.map((ft) => {
-              const base = fuelPrices[ft.id] || 0;
-              const final = calcFinalPrice(base, taxes);
-              return (
-                <div key={ft.id} className="rounded-xl bg-muted/70 p-3.5">
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full" style={{ backgroundColor: ft.dot }} aria-hidden />
-                    <span className="text-[13px] font-semibold">{ft.label}</span>
-                  </div>
-                  {editingPrices ? (
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={draftPrices[ft.id] ?? ""}
-                      onChange={(e) => setDraftPrices((p) => ({ ...p, [ft.id]: e.target.value }))}
-                      className="h-8 text-[13px]"
-                      placeholder="0,00"
-                      aria-label={`Precio base de ${ft.label}`}
+          {editingPrices ? (
+            <div className="flex flex-col gap-2">
+              {draftTypes.map((ft, i) => {
+                const used = usageOf(ft.id);
+                return (
+                  <div key={ft.id} className="grid grid-cols-[auto_1fr_112px_32px] items-center gap-2">
+                    <ColorPicker
+                      value={ft.dot}
+                      onChange={(dot) => setDraftTypes((p) => p.map((x, j) => (j === i ? { ...x, dot } : x)))}
+                      label={ft.label || "combustible"}
                     />
-                  ) : (
-                    <>
-                      <div className="text-[11px] tabular text-muted-foreground">
-                        Base ${Number(base).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                      <div className="mt-1 text-[15px] font-semibold tabular text-fuel">
-                        ${Math.round(final).toLocaleString("es-AR")}
-                        <span className="text-[11px] font-normal text-muted-foreground">/L</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {editingPrices && (
-            <Notice>
-              Los nuevos registros de combustible usarán estos valores. Los gastos ya cargados no cambian.
-            </Notice>
+                    <Input
+                      value={ft.label}
+                      onChange={(e) => setDraftTypes((p) => p.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+                      placeholder="Nombre del combustible"
+                      aria-label="Nombre del combustible"
+                    />
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={draftPrices[ft.id] ?? ""}
+                        onChange={(e) => setDraftPrices((p) => ({ ...p, [ft.id]: e.target.value }))}
+                        className="pl-5"
+                        placeholder="0,00"
+                        aria-label={`Precio base de ${ft.label || "combustible"}`}
+                      />
+                    </div>
+                    <Tooltip label={used > 0 ? `${used} ${used === 1 ? "gasto usa" : "gastos usan"} este tipo` : "Quitar"}>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => removeFuelType(ft.id)}
+                        aria-label={`Quitar ${ft.label || "combustible"}`}
+                        className={cn(
+                          "text-muted-foreground",
+                          used > 0 ? "opacity-40" : "hover:bg-danger-soft hover:text-danger",
+                        )}
+                      >
+                        {used > 0 ? <Lock /> : <X />}
+                      </Button>
+                    </Tooltip>
+                  </div>
+                );
+              })}
+              <Button variant="outline" size="sm" className="mt-1 w-full border-dashed" onClick={addFuelType}>
+                <Plus />Agregar combustible
+              </Button>
+              <Notice>
+                Los nuevos registros usarán estos precios. Los gastos ya cargados no cambian.
+              </Notice>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              {fuelTypes.map((ft) => {
+                const base = fuelPrices[ft.id] || 0;
+                const final = calcFinalPrice(base, taxes);
+                const used = usageOf(ft.id);
+                return (
+                  <div key={ft.id} className="rounded-xl bg-muted/70 p-3.5">
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: ft.dot }} aria-hidden />
+                      <span className="truncate text-[13px] font-semibold">{ft.label}</span>
+                    </div>
+                    <div className="text-[11px] tabular text-muted-foreground">
+                      Base ${Number(base).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-1 text-[15px] font-semibold tabular text-fuel">
+                      ${Math.round(final).toLocaleString("es-AR")}
+                      <span className="text-[11px] font-normal text-muted-foreground">/L</span>
+                    </div>
+                    <div className="mt-1.5 text-[10px] text-muted-foreground">
+                      {used > 0 ? `${used} ${used === 1 ? "carga" : "cargas"}` : "sin uso"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>
@@ -260,12 +346,16 @@ export function SettingsView({
                     </span>
                     {i === 0 && <Badge variant="success">Actual</Badge>}
                   </div>
+                  {/* Se listan las claves del snapshot, no el catálogo actual:
+                      un tipo que ya no existe igual debe verse en su historial. */}
                   <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                    {FUEL_TYPES.map((ft) => (
-                      <div key={ft.id} className="text-[11px]">
-                        <span className="text-muted-foreground">{ft.label} </span>
+                    {Object.entries(h.prices).map(([id, price]) => (
+                      <div key={id} className="text-[11px]">
+                        <span className="text-muted-foreground">
+                          {fuelTypes.find((t) => t.id === id)?.label ?? id}{" "}
+                        </span>
                         <span className={cn("font-semibold tabular", i === 0 ? "text-service" : "text-foreground")}>
-                          ${Number(h.prices[ft.id] || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${Number(price || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     ))}
@@ -277,6 +367,23 @@ export function SettingsView({
         </Card>
       )}
     </div>
+  );
+}
+
+/** Ciclo por la paleta: un clic pasa al siguiente color disponible. */
+function ColorPicker({ value, onChange, label }) {
+  const idx = Math.max(0, DOT_COLORS.indexOf(value));
+  return (
+    <Tooltip label="Cambiar color">
+      <button
+        type="button"
+        onClick={() => onChange(DOT_COLORS[(idx + 1) % DOT_COLORS.length])}
+        aria-label={`Cambiar el color de ${label}`}
+        className="flex size-9 items-center justify-center rounded-lg border border-input bg-card transition-colors hover:bg-muted"
+      >
+        <span className="size-3.5 rounded-full" style={{ backgroundColor: value }} aria-hidden />
+      </button>
+    </Tooltip>
   );
 }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DEFAULT_FUEL_PRICES, DEFAULT_TAXES } from "../theme.js";
+import { DEFAULT_FUEL_PRICES, DEFAULT_FUEL_TYPES, DEFAULT_TAXES } from "../theme.js";
 import { fetchState, pushState } from "./api.js";
 
 const LS_KEY = "fleet2:state";
@@ -10,14 +10,22 @@ const EMPTY = {
   expenses: [],
   odometer: [],
   fuelPrices: DEFAULT_FUEL_PRICES,
+  fuelTypes: DEFAULT_FUEL_TYPES,
   fuelHistory: [],
   taxes: DEFAULT_TAXES,
 };
 
+/** Backups previos al catálogo editable no traen fuelTypes. */
+function withDefaults(s) {
+  const merged = { ...EMPTY, ...s };
+  if (!merged.fuelTypes?.length) merged.fuelTypes = DEFAULT_FUEL_TYPES;
+  return merged;
+}
+
 function readLocal() {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    return raw ? { ...EMPTY, ...JSON.parse(raw) } : null;
+    return raw ? withDefaults(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
@@ -62,8 +70,9 @@ export function useFleetStore() {
       if (cancelled) return;
 
       if (hasData(remote)) {
-        setState({ ...EMPTY, ...remote });
-        writeLocal({ ...EMPTY, ...remote });
+        const next = withDefaults(remote);
+        setState(next);
+        writeLocal(next);
         setSyncState("synced");
       } else if (remote) {
         // El backend está vivo pero vacío: subimos lo que haya local.
@@ -100,7 +109,7 @@ export function useFleetStore() {
 
   /** Reemplaza todo el estado de golpe (import de un backup). */
   const replaceAll = useCallback((next) => {
-    const merged = { ...EMPTY, ...next };
+    const merged = withDefaults(next);
     setState(merged);
     writeLocal(merged);
     pending.current = merged;

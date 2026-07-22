@@ -37,7 +37,7 @@ async function readState(sql) {
     sql`SELECT * FROM vehicles ORDER BY created_at ASC`,
     sql`SELECT * FROM expenses ORDER BY date DESC`,
     sql`SELECT * FROM odometer_readings ORDER BY date DESC`,
-    sql`SELECT * FROM fuel_prices`,
+    sql`SELECT * FROM fuel_prices ORDER BY sort_order ASC, fuel_type ASC`,
     sql`SELECT * FROM fuel_price_history ORDER BY date DESC, created_at DESC`,
     sql`SELECT * FROM taxes ORDER BY id ASC`,
   ]);
@@ -72,6 +72,11 @@ async function readState(sql) {
       note: o.note,
     })),
     fuelPrices: Object.fromEntries(prices.map((p) => [p.fuel_type, Number(p.base_price)])),
+    fuelTypes: prices.map((p) => ({
+      id: p.fuel_type,
+      label: p.label || p.fuel_type,
+      dot: p.dot || "var(--neutral)",
+    })),
     fuelHistory: history.map((h) => ({ id: h.id, date: toISODate(h.date), prices: h.prices })),
     taxes: taxes.map((t) => ({ id: t.id, label: t.label, pct: Number(t.pct) })),
   };
@@ -80,8 +85,14 @@ async function readState(sql) {
 async function writeState(sql, state) {
   const {
     vehicles = [], expenses = [], odometer = [],
-    fuelPrices = {}, fuelHistory = [], taxes = [],
+    fuelPrices = {}, fuelTypes = [], fuelHistory = [], taxes = [],
   } = state || {};
+
+  // El catálogo manda sobre las claves sueltas de fuelPrices: si un tipo se
+  // eliminó desde la app, no debe resucitar por tener precio cargado.
+  const catalog = fuelTypes.length
+    ? fuelTypes
+    : Object.keys(fuelPrices).map((id) => ({ id, label: id, dot: "var(--neutral)" }));
 
   const statements = [];
 
@@ -122,12 +133,15 @@ async function writeState(sql, state) {
     `);
   }
 
-  for (const [fuelType, basePrice] of Object.entries(fuelPrices)) {
+  catalog.forEach((ft, i) => {
     statements.push(sql`
-      INSERT INTO fuel_prices (fuel_type, base_price)
-      VALUES (${fuelType}, ${Number(basePrice) || 0})
+      INSERT INTO fuel_prices (fuel_type, label, dot, sort_order, base_price)
+      VALUES (
+        ${String(ft.id)}, ${ft.label || String(ft.id)}, ${ft.dot || "var(--neutral)"},
+        ${i}, ${Number(fuelPrices[ft.id]) || 0}
+      )
     `);
-  }
+  });
 
   for (const h of fuelHistory) {
     statements.push(sql`

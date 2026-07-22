@@ -43,7 +43,7 @@ function useTheme() {
 
 export default function App() {
   const { state, update, replaceAll, loaded, syncState } = useFleetStore();
-  const { vehicles, expenses, odometer, fuelPrices, fuelHistory, taxes } = state;
+  const { vehicles, expenses, odometer, fuelPrices, fuelTypes, fuelHistory, taxes } = state;
   const toast = useToast();
   const [dark, toggleTheme] = useTheme();
 
@@ -65,7 +65,7 @@ export default function App() {
 
   const askDel = (msg, fn) => setConfirm({ msg, onConfirm: fn });
 
-  const blankExpense = { vehicleId: vehicles[0]?.id || "", type: "combustible", fuelType: "super", amount: "", date: todayISO(), km: "", note: "", liters: "" };
+  const blankExpense = { vehicleId: vehicles[0]?.id || "", type: "combustible", fuelType: fuelTypes[0]?.id || "", amount: "", date: todayISO(), km: "", note: "", liters: "" };
   const blankOdometer = { vehicleId: vehicles[0]?.id || "", km: "", date: todayISO(), note: "" };
   const blankVehicle = { name: "", plate: "", brand: "", model: "", year: "", initialKm: "" };
 
@@ -163,7 +163,7 @@ export default function App() {
   }
 
   function exportData() {
-    const data = { exportedAt: new Date().toISOString(), vehicles, expenses, odometer, fuelPrices, fuelHistory, taxes };
+    const data = { exportedAt: new Date().toISOString(), vehicles, expenses, odometer, fuelPrices, fuelTypes, fuelHistory, taxes };
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
     const a = document.createElement("a");
     a.href = url;
@@ -285,6 +285,7 @@ export default function App() {
                   initial={editExpense}
                   vehicles={vehicles}
                   fuelPrices={fuelPrices}
+                  fuelTypes={fuelTypes}
                   taxes={taxes}
                   isEdit={Boolean(editExpense.id)}
                   onSave={saveExpense}
@@ -320,7 +321,7 @@ export default function App() {
 
             {view === "report" && !editExpense && !editOdometer && (
               <ReportView
-                vehicles={vehicles} expenses={expenses} odometer={odometer}
+                vehicles={vehicles} expenses={expenses} odometer={odometer} fuelTypes={fuelTypes}
                 rMonth={rMonth} setRMonth={setRMonth} rYear={rYear} setRYear={setRYear}
                 rVid={rVid} setRVid={setRVid} getExp={getExp}
                 onNewExpense={openNewExpense} onNewOdometer={openNewOdometer}
@@ -352,7 +353,7 @@ export default function App() {
 
             {view === "log" && !editExpense && (
               <LogView
-                vehicles={vehicles} expenses={expenses}
+                vehicles={vehicles} expenses={expenses} fuelTypes={fuelTypes}
                 onNewExpense={openNewExpense}
                 onEditExpense={(e) => { closeForms(); setEditExpense(e); }}
                 onDeleteExpense={delExpense}
@@ -374,6 +375,9 @@ export default function App() {
               <SettingsView
                 fuelPrices={fuelPrices}
                 setFuelPrices={(fp) => update({ fuelPrices: fp })}
+                fuelTypes={fuelTypes}
+                setFuelTypes={(ft) => update({ fuelTypes: ft })}
+                expenses={expenses}
                 fuelHistory={fuelHistory}
                 setFuelHistory={(fn) => update((p) => ({ ...p, fuelHistory: typeof fn === "function" ? fn(p.fuelHistory) : fn }))}
                 taxes={taxes}

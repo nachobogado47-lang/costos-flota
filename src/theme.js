@@ -40,14 +40,21 @@ export const VCOLORS = [
 ];
 
 /**
- * Tipos de combustible. `dot` es el color del indicador, elegido para que se
- * distingan entre sí sin depender del texto.
+ * Catálogo inicial de combustibles. Es sólo la semilla: el catálogo real vive
+ * en el estado y se administra desde Precios, así que un combustible nuevo no
+ * requiere tocar el código. `dot` es el color del indicador.
  */
-export const FUEL_TYPES = [
+export const DEFAULT_FUEL_TYPES = [
   { id: "gnc",        label: "GNC",        dot: "var(--fuel)" },
   { id: "super",      label: "Super",      dot: "var(--service)" },
   { id: "gasoil",     label: "Gasoil",     dot: "var(--repair)" },
   { id: "eurodiesel", label: "Eurodiesel", dot: "var(--v5)" },
+];
+
+/** Paleta ofrecida al crear un combustible nuevo. */
+export const DOT_COLORS = [
+  "var(--fuel)", "var(--service)", "var(--repair)",
+  "var(--insurance)", "var(--v5)", "var(--v6)", "var(--neutral)",
 ];
 
 /** Impuestos por defecto: IVA 21% + Otro impuesto 15.5%. */

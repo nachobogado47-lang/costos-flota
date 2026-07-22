@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Info } from "lucide-react";
-import { CATEGORIES, FUEL_TYPES } from "@/theme";
+import { CATEGORIES } from "@/theme";
 import { calcFinalPrice, calcFuelAmount, $fmt } from "@/lib/calc";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 
-export function ExpenseForm({ initial, vehicles, fuelPrices, taxes, onSave, onCancel, isEdit }) {
+export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, onSave, onCancel, isEdit }) {
   const [f, setF] = useState(initial);
   const [saving, setSaving] = useState(false);
   const isFuel = f.type === "combustible";
@@ -87,7 +87,7 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, taxes, onSave, onCa
               <div>
                 <Label required>Tipo de combustible</Label>
                 <div className="grid grid-cols-4 gap-1.5">
-                  {FUEL_TYPES.map((ft) => {
+                  {fuelTypes.map((ft) => {
                     const final = calcFinalPrice(fuelPrices?.[ft.id] || 0, taxes);
                     const sel = f.fuelType === ft.id;
                     return (

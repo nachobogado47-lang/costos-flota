@@ -44,12 +44,21 @@ CREATE TABLE IF NOT EXISTS odometer_readings (
 CREATE INDEX IF NOT EXISTS odometer_vehicle_idx ON odometer_readings (vehicle_id);
 CREATE INDEX IF NOT EXISTS odometer_date_idx    ON odometer_readings (date DESC);
 
--- Precio base por litro, sin impuestos. Una fila por tipo de combustible.
+-- Catálogo de combustibles con su precio base por litro, sin impuestos.
+-- Es ABM desde la app: se pueden agregar, renombrar y quitar tipos.
 CREATE TABLE IF NOT EXISTS fuel_prices (
   fuel_type   TEXT PRIMARY KEY,
+  label       TEXT          NOT NULL DEFAULT '',
+  dot         TEXT          NOT NULL DEFAULT 'var(--neutral)',
+  sort_order  SMALLINT      NOT NULL DEFAULT 0,
   base_price  NUMERIC(12,2) NOT NULL DEFAULT 0,
   updated_at  TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
+
+-- Bases creadas antes de que el catálogo fuera editable.
+ALTER TABLE fuel_prices ADD COLUMN IF NOT EXISTS label      TEXT     NOT NULL DEFAULT '';
+ALTER TABLE fuel_prices ADD COLUMN IF NOT EXISTS dot        TEXT     NOT NULL DEFAULT 'var(--neutral)';
+ALTER TABLE fuel_prices ADD COLUMN IF NOT EXISTS sort_order SMALLINT NOT NULL DEFAULT 0;
 
 -- Snapshot de todos los precios cada vez que se actualizan.
 CREATE TABLE IF NOT EXISTS fuel_price_history (

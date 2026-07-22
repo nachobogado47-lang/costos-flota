@@ -1,5 +1,5 @@
 import { Car, Fuel, Gauge, Inbox, MapPin, Plus, Receipt, Route, Wallet } from "lucide-react";
-import { CATEGORIES, MONTHS, YEARS, VCOLORS, FUEL_TYPES } from "@/theme";
+import { CATEGORIES, MONTHS, YEARS, VCOLORS } from "@/theme";
 import { $fmt, kmFmt, cat, totalOf, monthlyKm, atNoon } from "@/lib/calc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import {
 } from "@/components/shared";
 
 export function ReportView({
-  vehicles, expenses, odometer,
+  vehicles, expenses, odometer, fuelTypes,
   rMonth, setRMonth, rYear, setRYear, rVid, setRVid,
   getExp, onNewExpense, onNewOdometer, onEditExpense, onEditOdometer,
   onDeleteExpense, onDeleteOdometer, onAddVehicle,
@@ -110,7 +110,7 @@ export function ReportView({
             <VehicleReportCard
               key={v.id}
               v={v} index={i} rMonth={rMonth} rYear={rYear}
-              expenses={expenses} odometer={odometer} getExp={getExp}
+              expenses={expenses} odometer={odometer} fuelTypes={fuelTypes} getExp={getExp}
               onEditExpense={onEditExpense} onEditOdometer={onEditOdometer}
               onDeleteExpense={onDeleteExpense} onDeleteOdometer={onDeleteOdometer}
               onNewOdometerFor={() => onNewOdometer(v.id)}
@@ -132,7 +132,7 @@ function SectionLabel({ icon: Icon, children, className = "" }) {
 }
 
 function VehicleReportCard({
-  v, index, rMonth, rYear, expenses, odometer, getExp,
+  v, index, rMonth, rYear, expenses, odometer, fuelTypes, getExp,
   onEditExpense, onEditOdometer, onDeleteExpense, onDeleteOdometer, onNewOdometerFor,
 }) {
   const vExps = getExp(v.id, rMonth, rYear);
@@ -247,7 +247,7 @@ function VehicleReportCard({
             <div className="flex flex-col gap-1.5">
               {[...vExps].sort((a, b) => new Date(b.date) - new Date(a.date)).map((e) => (
                 <ExpenseRow
-                  key={e.id} e={e} compact
+                  key={e.id} e={e} fuelTypes={fuelTypes} compact
                   onEdit={() => onEditExpense(e)}
                   onDelete={() => onDeleteExpense(e.id)}
                 />
@@ -284,9 +284,9 @@ function MiniStat({ icon: Icon, label, value, sub, tone, surface }) {
   );
 }
 
-export function ExpenseRow({ e, vehicle, vehicleColor, compact, onEdit, onDelete }) {
+export function ExpenseRow({ e, vehicle, vehicleColor, fuelTypes = [], compact, onEdit, onDelete }) {
   const c = cat(e.type);
-  const ft = e.type === "combustible" && e.fuelType ? FUEL_TYPES.find((x) => x.id === e.fuelType) : null;
+  const ft = e.type === "combustible" && e.fuelType ? fuelTypes.find((x) => x.id === e.fuelType) : null;
 
   return (
     <div
