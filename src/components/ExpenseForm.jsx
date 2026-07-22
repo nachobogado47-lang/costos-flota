@@ -1,9 +1,17 @@
 import { useState } from "react";
-import { C, S, CATEGORIES, FUEL_TYPES } from "../theme.js";
-import { calcFinalPrice, calcFuelAmount } from "../lib/calc.js";
+import { Check, Info } from "lucide-react";
+import { CATEGORIES, FUEL_TYPES } from "@/theme";
+import { calcFinalPrice, calcFuelAmount, $fmt } from "@/lib/calc";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 
 export function ExpenseForm({ initial, vehicles, fuelPrices, taxes, onSave, onCancel, isEdit }) {
   const [f, setF] = useState(initial);
+  const [saving, setSaving] = useState(false);
   const isFuel = f.type === "combustible";
 
   // En combustible el importe se deriva de litros × precio final, nunca se tipea.
@@ -11,156 +19,226 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, taxes, onSave, onCa
     ? calcFuelAmount(Number(f.liters), f.fuelType, fuelPrices, taxes)
     : null;
 
-  const ok = f.vehicleId && (isFuel ? (f.liters && f.fuelType) : f.amount);
+  const ok = f.vehicleId && (isFuel ? Number(f.liters) > 0 && f.fuelType : Number(f.amount) > 0);
 
-  function handleSave() {
-    if (!ok) return;
-    onSave(isFuel
-      ? { ...f, amount: calcedAmount, liters: Number(f.liters) }
-      : { ...f, amount: Number(f.amount) });
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!ok || saving) return;
+    setSaving(true);
+    try {
+      await onSave(isFuel
+        ? { ...f, amount: calcedAmount, liters: Number(f.liters) }
+        : { ...f, amount: Number(f.amount) });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div style={S.card}>
-      <div style={{ display: "grid", gap: 14 }}>
-        <div>
-          <label style={S.label}>Vehículo <span style={{ color: C.rose }}>*</span></label>
-          <select value={f.vehicleId} onChange={(e) => setF((p) => ({ ...p, vehicleId: e.target.value }))} style={S.input}>
-            <option value="">— Seleccioná —</option>
-            {vehicles.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.plate})</option>)}
-          </select>
-        </div>
-
-        <div>
-          <label style={S.label}>Tipo de gasto <span style={{ color: C.rose }}>*</span></label>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setF((p) => ({ ...p, type: c.id, fuelType: c.id === "combustible" ? (p.fuelType || "super") : "" }))}
-                style={{
-                  padding: "9px 6px", borderRadius: 10, fontSize: 12, cursor: "pointer",
-                  border: f.type === c.id ? `2px solid ${c.color}` : `1.5px solid ${C.bone}`,
-                  background: f.type === c.id ? c.bg : C.white,
-                  color: f.type === c.id ? c.color : C.slate,
-                  fontWeight: f.type === c.id ? 600 : 400,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                }}
-              >
-                <span style={{ fontSize: 16 }}>{c.icon}</span>{c.label}
-              </button>
-            ))}
+    <Card className="animate-rise">
+      <CardContent className="pt-5">
+        <form onSubmit={handleSubmit} className="grid gap-5">
+          <div>
+            <Label htmlFor="exp-vehicle" required>Vehículo</Label>
+            <Select
+              id="exp-vehicle"
+              value={f.vehicleId}
+              onChange={(e) => setF((p) => ({ ...p, vehicleId: e.target.value }))}
+            >
+              <option value="">— Seleccioná —</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>{v.name} ({v.plate})</option>
+              ))}
+            </Select>
           </div>
-        </div>
 
-        {isFuel ? (
-          <>
-            <div>
-              <label style={S.label}>Tipo de combustible <span style={{ color: C.rose }}>*</span></label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
-                {FUEL_TYPES.map((ft) => {
-                  const final = calcFinalPrice(fuelPrices?.[ft.id] || 0, taxes);
-                  const sel = f.fuelType === ft.id;
-                  return (
-                    <button
-                      key={ft.id}
-                      onClick={() => setF((p) => ({ ...p, fuelType: ft.id }))}
-                      style={{
-                        padding: "9px 4px", borderRadius: 10, fontSize: 11, cursor: "pointer",
-                        border: sel ? `2px solid ${C.blue}` : `1.5px solid ${C.bone}`,
-                        background: sel ? C.blueSoft : C.white,
-                        color: sel ? C.blue : C.slate,
-                        fontWeight: sel ? 600 : 400,
-                        display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                      }}
-                    >
-                      <span style={{ fontSize: 18 }}>{ft.icon}</span>
-                      <span>{ft.label}</span>
-                      <span style={{ fontSize: 10, color: sel ? C.blue : C.mist }}>
-                        ${Math.round(final).toLocaleString("es-AR")}/L
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+          <div>
+            <Label required>Tipo de gasto</Label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {CATEGORIES.map((c) => {
+                const sel = f.type === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setF((p) => ({
+                      ...p,
+                      type: c.id,
+                      fuelType: c.id === "combustible" ? (p.fuelType || "super") : "",
+                    }))}
+                    aria-pressed={sel}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2.5 text-xs transition-all duration-150",
+                      "hover:border-foreground/20 active:scale-[0.98]",
+                      sel ? "border-transparent font-semibold" : "border-border bg-card text-muted-foreground",
+                    )}
+                    style={sel ? { backgroundColor: c.surface, color: c.tone, boxShadow: `inset 0 0 0 1.5px ${c.tone}` } : undefined}
+                  >
+                    <c.Icon className="size-3.5 shrink-0" aria-hidden />
+                    {c.label}
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {isFuel ? (
+            <>
               <div>
-                <label style={S.label}>Litros cargados <span style={{ color: C.rose }}>*</span></label>
-                <input type="number" value={f.liters || ""} onChange={(e) => setF((p) => ({ ...p, liters: e.target.value }))} placeholder="0.00" style={S.input} />
-              </div>
-              <div>
-                <label style={S.label}>Fecha</label>
-                <input type="date" value={f.date} onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))} style={S.input} />
-              </div>
-            </div>
-
-            {calcedAmount !== null && Number(f.liters) > 0 && f.fuelType && (
-              <div style={{ background: C.blueSoft, borderRadius: 12, padding: "12px 14px" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: C.blue, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  Desglose del importe calculado
+                <Label required>Tipo de combustible</Label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {FUEL_TYPES.map((ft) => {
+                    const final = calcFinalPrice(fuelPrices?.[ft.id] || 0, taxes);
+                    const sel = f.fuelType === ft.id;
+                    return (
+                      <button
+                        key={ft.id}
+                        type="button"
+                        onClick={() => setF((p) => ({ ...p, fuelType: ft.id }))}
+                        aria-pressed={sel}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 rounded-lg border px-1 py-2.5 text-[11px] transition-all duration-150",
+                          "hover:border-foreground/20 active:scale-[0.98]",
+                          sel ? "border-primary bg-accent font-semibold text-accent-foreground" : "border-border bg-card text-muted-foreground",
+                        )}
+                      >
+                        <span className="size-2.5 rounded-full" style={{ backgroundColor: ft.dot }} aria-hidden />
+                        <span>{ft.label}</span>
+                        <span className={cn("tabular text-[10px]", sel ? "text-accent-foreground" : "text-muted-foreground/70")}>
+                          ${Math.round(final).toLocaleString("es-AR")}/L
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-                {(() => {
-                  const base = fuelPrices?.[f.fuelType] || 0;
-                  const lts = Number(f.liters);
-                  const sub = base * lts;
-                  const rows = taxes.map((t) => ({ label: t.label, val: (sub * Number(t.pct)) / 100 }));
-                  return (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", color: C.slate }}>
-                        <span>Subtotal ({lts} L × ${Math.round(base).toLocaleString("es-AR")})</span>
-                        <span>${Math.round(sub).toLocaleString("es-AR")}</span>
-                      </div>
-                      {rows.map((r) => (
-                        <div key={r.label} style={{ display: "flex", justifyContent: "space-between", color: C.slate }}>
-                          <span>{r.label}</span>
-                          <span>${Math.round(r.val).toLocaleString("es-AR")}</span>
-                        </div>
-                      ))}
-                      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: C.blue, borderTop: `1px solid ${C.blue}33`, paddingTop: 6, marginTop: 2, fontSize: 15 }}>
-                        <span>Total</span>
-                        <span>${calcedAmount.toLocaleString("es-AR")}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
-            )}
-          </>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label style={S.label}>Importe ($) <span style={{ color: C.rose }}>*</span></label>
-              <input type="number" value={f.amount} onChange={(e) => setF((p) => ({ ...p, amount: e.target.value }))} placeholder="0" style={S.input} />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="exp-liters" required>Litros cargados</Label>
+                  <Input
+                    id="exp-liters"
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={f.liters || ""}
+                    onChange={(e) => setF((p) => ({ ...p, liters: e.target.value }))}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="exp-date-f">Fecha</Label>
+                  <Input
+                    id="exp-date-f"
+                    type="date"
+                    value={f.date}
+                    onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {calcedAmount !== null && Number(f.liters) > 0 && f.fuelType && (
+                <FuelBreakdown
+                  liters={Number(f.liters)}
+                  base={fuelPrices?.[f.fuelType] || 0}
+                  taxes={taxes}
+                  total={calcedAmount}
+                />
+              )}
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="exp-amount" required>Importe</Label>
+                <Input
+                  id="exp-amount"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  value={f.amount}
+                  onChange={(e) => setF((p) => ({ ...p, amount: e.target.value }))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="exp-date">Fecha</Label>
+                <Input
+                  id="exp-date"
+                  type="date"
+                  value={f.date}
+                  onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
+                />
+              </div>
             </div>
-            <div>
-              <label style={S.label}>Fecha</label>
-              <input type="date" value={f.date} onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))} style={S.input} />
-            </div>
+          )}
+
+          <div>
+            <Label htmlFor="exp-km">
+              Km odómetro <span className="font-normal normal-case tracking-normal opacity-70">(opcional)</span>
+            </Label>
+            <Input
+              id="exp-km"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              value={f.km}
+              onChange={(e) => setF((p) => ({ ...p, km: e.target.value }))}
+              placeholder="Lectura actual"
+            />
           </div>
-        )}
 
-        <div>
-          <label style={S.label}>
-            Km odómetro <span style={{ fontSize: 11, fontWeight: 400, color: C.mist }}>(opcional)</span>
-          </label>
-          <input type="number" value={f.km} onChange={(e) => setF((p) => ({ ...p, km: e.target.value }))} placeholder="Lectura actual" style={S.input} />
-        </div>
+          <div>
+            <Label htmlFor="exp-note">
+              Nota <span className="font-normal normal-case tracking-normal opacity-70">(opcional)</span>
+            </Label>
+            <Input
+              id="exp-note"
+              value={f.note}
+              onChange={(e) => setF((p) => ({ ...p, note: e.target.value }))}
+              placeholder="Proveedor, descripción…"
+            />
+          </div>
 
-        <div>
-          <label style={S.label}>Nota (opcional)</label>
-          <input value={f.note} onChange={(e) => setF((p) => ({ ...p, note: e.target.value }))} placeholder="Proveedor, descripción…" style={S.input} />
-        </div>
+          <div className="flex gap-2 border-t border-border pt-4">
+            <Button type="submit" disabled={!ok} loading={saving} className="flex-1">
+              {!saving && <Check />}
+              {isEdit ? "Guardar cambios" : "Guardar gasto"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FuelBreakdown({ liters, base, taxes, total }) {
+  const sub = base * liters;
+  return (
+    <div className="rounded-xl bg-accent p-4 animate-rise">
+      <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-accent-foreground">
+        <Info className="size-3" aria-hidden />
+        Importe calculado
       </div>
-
-      <div style={{ height: 1, background: C.bone, margin: "14px 0" }} />
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={handleSave} disabled={!ok} style={{ ...S.btn(ok ? C.blue : C.bone, ok ? C.white : C.mist), flex: 1, justifyContent: "center", padding: "11px", cursor: ok ? "pointer" : "default" }}>
-          ✓ {isEdit ? "Guardar cambios" : "Guardar gasto"}
-        </button>
-        <button onClick={onCancel} style={{ ...S.btn(C.paper, C.slate, C.bone), padding: "11px 16px" }}>Cancelar</button>
-      </div>
+      <dl className="flex flex-col gap-1.5 text-[13px]">
+        <div className="flex justify-between text-accent-foreground/80">
+          <dt>Subtotal · {liters} L × ${Math.round(base).toLocaleString("es-AR")}</dt>
+          <dd className="tabular">${Math.round(sub).toLocaleString("es-AR")}</dd>
+        </div>
+        {taxes.map((t) => (
+          <div key={t.id} className="flex justify-between text-accent-foreground/80">
+            <dt>{t.label} · {t.pct}%</dt>
+            <dd className="tabular">${Math.round((sub * Number(t.pct)) / 100).toLocaleString("es-AR")}</dd>
+          </div>
+        ))}
+        <div className="mt-1 flex items-baseline justify-between border-t border-accent-foreground/15 pt-2">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-accent-foreground">Total</dt>
+          <dd className="font-display text-xl tabular text-accent-foreground">{$fmt(total)}</dd>
+        </div>
+      </dl>
     </div>
   );
 }

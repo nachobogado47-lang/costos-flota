@@ -8,9 +8,39 @@ odómetro y arma informes mensuales y comparativas entre vehículos.
 
 ## Stack
 
-- **React 19** + **Vite 6** — sin framework de estilos, todo con estilos inline
+- **React 19** + **Vite 6**
+- **Tailwind v4** + componentes estilo **shadcn/ui** (en `src/components/ui/`)
+- **Lucide** para toda la iconografía
 - **Vercel Functions** (`/api`) — endpoints serverless
 - **Postgres** (Neon) — persistencia
+
+### Diseño
+
+Base cálida heredada del prototipo (papel `#F6F4EF` / tinta `#1A1917`) en vez del
+gris azulado habitual, con acentos semánticos por categoría de gasto. Todo el
+color vive en variables CSS (`src/index.css`); ningún componente hardcodea hex.
+
+Tipografía: **Instrument Serif** para las cifras protagonistas — el contraste
+editorial las despega de la interfaz utilitaria — sobre **Geist** para UI y
+**Geist Mono** para columnas numéricas. Las cifras usan `font-variant-numeric:
+tabular-nums` para que no bailen al actualizarse.
+
+Hay modo claro y oscuro; el tema se resuelve antes del primer paint para que no
+haya destello, y respeta `prefers-color-scheme` salvo elección explícita.
+`prefers-reduced-motion` desactiva todas las animaciones.
+
+### Estados
+
+Cada vista cubre el ciclo completo:
+
+| Estado | Dónde |
+|---|---|
+| **Carga** | Skeletons con la silueta real de cada vista — sin salto de layout |
+| **Vacío** | Empty state por vista, siempre con la acción que lo resuelve |
+| **Sin período** | Comparación e Informe ofrecen saltar a otro rango |
+| **Guardando** | Spinner en el botón, formulario bloqueado |
+| **Error** | Toast persistente; importación fallida no pisa los datos |
+| **Sync** | Indicador en el header: guardado / guardando / local / sin sincronizar |
 
 ## Desarrollo
 

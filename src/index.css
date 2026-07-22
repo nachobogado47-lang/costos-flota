@@ -1,46 +1,244 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Paleta heredada del prototipo: base cálida (papel/tinta) en vez del gris azulado
+  habitual, con acentos semánticos por categoría de gasto. El dark mode invierte
+  la base manteniendo la calidez para que no se sienta como otra app.
+*/
+:root {
+  --radius: 0.75rem;
+
+  --background: #f6f4ef;
+  --foreground: #1a1917;
+
+  --card: #ffffff;
+  --card-foreground: #1a1917;
+
+  --popover: #ffffff;
+  --popover-foreground: #1a1917;
+
+  --primary: #1a5ea8;
+  --primary-foreground: #ffffff;
+
+  --secondary: #ebe8e1;
+  --secondary-foreground: #4b4a47;
+
+  --muted: #efece5;
+  --muted-foreground: #7d7b74;
+
+  --accent: #e6eef9;
+  --accent-foreground: #1a5ea8;
+
+  --destructive: #c0393b;
+  --destructive-foreground: #ffffff;
+
+  --border: #e2ded5;
+  --input: #ded9cf;
+  --ring: #1a5ea8;
+
+  /* Acentos por categoría — pares color/superficie */
+  --fuel: #1a5ea8;
+  --fuel-soft: #e6eef9;
+  --service: #0c6b4a;
+  --service-soft: #e1f4ec;
+  --repair: #b86b10;
+  --repair-soft: #faf0dc;
+  --insurance: #4e3aab;
+  --insurance-soft: #eeebfb;
+  --danger: #c0393b;
+  --danger-soft: #fbebeb;
+  --neutral: #4b4a47;
+  --neutral-soft: #e8e5de;
+
+  /* Series por vehículo */
+  --v1: #1a5ea8;
+  --v2: #0c6b4a;
+  --v3: #b86b10;
+  --v4: #4e3aab;
+  --v5: #c0393b;
+  --v6: #0c6b6b;
 }
 
-html {
-  -webkit-text-size-adjust: 100%;
+.dark {
+  --background: #14130f;
+  --foreground: #f0ede5;
+
+  --card: #1c1a16;
+  --card-foreground: #f0ede5;
+
+  --popover: #1c1a16;
+  --popover-foreground: #f0ede5;
+
+  --primary: #6ba3e8;
+  --primary-foreground: #10182a;
+
+  --secondary: #262320;
+  --secondary-foreground: #d4d0c6;
+
+  --muted: #24211d;
+  --muted-foreground: #9b9992;
+
+  --accent: #1b2b40;
+  --accent-foreground: #8dbcf5;
+
+  --destructive: #e05e60;
+  --destructive-foreground: #1a0e0e;
+
+  --border: #2e2a25;
+  --input: #383229;
+  --ring: #6ba3e8;
+
+  --fuel: #6ba3e8;
+  --fuel-soft: #16263a;
+  --service: #4cb891;
+  --service-soft: #10291f;
+  --repair: #e0a04d;
+  --repair-soft: #2e2312;
+  --insurance: #9b86e8;
+  --insurance-soft: #211c3a;
+  --danger: #e05e60;
+  --danger-soft: #2f1717;
+  --neutral: #a5a29a;
+  --neutral-soft: #2a2622;
+
+  --v1: #6ba3e8;
+  --v2: #4cb891;
+  --v3: #e0a04d;
+  --v4: #9b86e8;
+  --v5: #e05e60;
+  --v6: #4cb0b0;
 }
 
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #f6f4ef;
-  color: #1a1917;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-fuel: var(--fuel);
+  --color-fuel-soft: var(--fuel-soft);
+  --color-service: var(--service);
+  --color-service-soft: var(--service-soft);
+  --color-repair: var(--repair);
+  --color-repair-soft: var(--repair-soft);
+  --color-insurance: var(--insurance);
+  --color-insurance-soft: var(--insurance-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-neutral: var(--neutral);
+  --color-neutral-soft: var(--neutral-soft);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
 }
 
-button {
-  font-family: inherit;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Las cifras se comparan en columna: nunca deben bailar al actualizarse. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* iOS hace zoom en inputs con font-size < 16px. */
+  @media (max-width: 480px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
 }
 
-button:disabled {
-  cursor: default;
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  /* Entrada escalonada: el contenido aparece en cascada al cargar la vista. */
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .animate-rise {
+    animation: rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--foreground) 6%, transparent),
+      transparent
+    );
+    animation: shimmer 1.8s infinite;
+  }
 }
 
-input,
-select {
-  font-family: inherit;
-}
-
-input:focus-visible,
-select:focus-visible,
-button:focus-visible {
-  outline: 2px solid #1a5ea8;
-  outline-offset: 2px;
-}
-
-/* iOS hace zoom en inputs con font-size < 16px. */
-@media (max-width: 480px) {
-  input,
-  select {
-    font-size: 16px;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
