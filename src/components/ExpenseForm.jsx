@@ -100,19 +100,47 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
 
           {/* Litros — solo si es combustible */}
           {isFuel && (
-            <div>
-              <Label htmlFor="exp-liters" required>Litros cargados</Label>
-              <Input
-                id="exp-liters"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                value={f.liters || ""}
-                onChange={(e) => setF((p) => ({ ...p, liters: e.target.value }))}
-                placeholder="0,00"
-              />
-            </div>
+            <>
+              {/* Tipo de combustible — solo informativo, no afecta el importe */}
+              <div>
+                <Label>Tipo de combustible</Label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {fuelTypes.map((ft) => {
+                    const sel = f.fuelType === ft.id;
+                    return (
+                      <button
+                        key={ft.id}
+                        type="button"
+                        onClick={() => setF((p) => ({ ...p, fuelType: ft.id }))}
+                        aria-pressed={sel}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 rounded-lg border px-1 py-2.5 text-[11px] transition-all duration-150",
+                          "hover:border-foreground/20 active:scale-[0.98]",
+                          sel ? "border-primary bg-accent font-semibold text-accent-foreground" : "border-border bg-card text-muted-foreground",
+                        )}
+                      >
+                        <span className="size-2.5 rounded-full" style={{ backgroundColor: ft.dot }} aria-hidden />
+                        <span>{ft.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="exp-liters" required>Litros cargados</Label>
+                <Input
+                  id="exp-liters"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  value={f.liters || ""}
+                  onChange={(e) => setF((p) => ({ ...p, liters: e.target.value }))}
+                  placeholder="0,00"
+                />
+              </div>
+            </>
           )}
 
           {/* Km odómetro */}
