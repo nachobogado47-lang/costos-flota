@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import { CATEGORIES } from "@/theme";
+import { calcFinalPrice, calcFuelAmount, $fmt } from "@/lib/calc";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,16 +12,31 @@ import { Select } from "@/components/ui/select";
 export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, onSave, onCancel, isEdit }) {
   const [f, setF] = useState(initial);
   const [saving, setSaving] = useState(false);
-  const isFuel = f.type === "combustible";
 
-  const ok = f.vehicleId && Number(f.amount) > 0 && (isFuel ? Number(f.liters) > 0 : true);
+  const isFuel    = f.type === "combustible";
+  const isGulf    = f.type === "combustible_gulf";
+  const isAnyFuel = isFuel || isGulf;
+
+  // Solo Gulf calcula automático
+  const calcedAmount = isGulf && f.liters && f.fuelType
+    ? calcFuelAmount(Number(f.liters), f.fuelType, fuelPrices, taxes)
+    : null;
+
+  const ok = f.vehicleId && (
+    isGulf ? Number(f.liters) > 0 && f.fuelType :
+    isFuel ? Number(f.amount) > 0 && Number(f.liters) > 0 :
+             Number(f.amount) > 0
+  );
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!ok || saving) return;
     setSaving(true);
     try {
-      await onSave({ ...f, amount: Number(f.amount), liters: Number(f.liters) || 0 });
+      const saved = isGulf
+        ? { ...f, amount: calcedAmount, liters: Number(f.liters) }
+        : { ...f, amount: Number(f.amount), liters: Number(f.liters) || 0 };
+      await onSave(saved);
     } finally {
       setSaving(false);
     }
@@ -56,7 +72,13 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => setF((p) => ({ ...p, type: c.id }))}
+                    onClick={() => setF((p) => ({
+                      ...p,
+                      type: c.id,
+                      fuelType: (c.id === "combustible" || c.id === "combustible_gulf")
+                        ? (p.fuelType || fuelTypes?.[0]?.id || "")
+                        : "",
+                    }))}
                     aria-pressed={sel}
                     className={cn(
                       "flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2.5 text-xs transition-all duration-150",
@@ -73,35 +95,102 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
             </div>
           </div>
 
-          {/* Importe + fecha — siempre manual */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="exp-amount" required>Importe ($)</Label>
-              <Input
-                id="exp-amount"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                value={f.amount}
-                onChange={(e) => setF((p) => ({ ...p, amount: e.target.value }))}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="exp-date">Fecha</Label>
-              <Input
-                id="exp-date"
-                type="date"
-                value={f.date}
-                onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
-              />
-            </div>
-          </div>
+          {/* ── GULF: tipo de combustible + litros + desglose automático ── */}
+          {isGulf && (
+            <>
+              <div>
+                <Label required>Tipo de combustible</Label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {fuelTypes.map((ft) => {
+                    const final = calcFinalPrice(fuelPrices?.[ft.id] || 0, taxes);
+                    const sel = f.fuelType === ft.id;
+                    return (
+                      <button
+                        key={ft.id}
+                        type="button"
+                        onClick={() => setF((p) => ({ ...p, fuelType: ft.id }))}
+                        aria-pressed={sel}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 rounded-lg border px-1 py-2.5 text-[11px] transition-all duration-150",
+                          "hover:border-foreground/20 active:scale-[0.98]",
+                          sel ? "border-primary bg-accent font-semibold text-accent-foreground" : "border-border bg-card text-muted-foreground",
+                        )}
+                      >
+                        <span className="size-2.5 rounded-full" style={{ backgroundColor: ft.dot }} aria-hidden />
+                        <span>{ft.label}</span>
+                        <span className={cn("tabular text-[10px]", sel ? "text-accent-foreground" : "text-muted-foreground/70")}>
+                          ${Math.round(final).toLocaleString("es-AR")}/L
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {/* Litros — solo si es combustible */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="exp-liters-gulf" required>Litros cargados</Label>
+                  <Input
+                    id="exp-liters-gulf"
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={f.liters || ""}
+                    onChange={(e) => setF((p) => ({ ...p, liters: e.target.value }))}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="exp-date-gulf">Fecha</Label>
+                  <Input
+                    id="exp-date-gulf"
+                    type="date"
+                    value={f.date}
+                    onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Desglose automático */}
+              {calcedAmount !== null && Number(f.liters) > 0 && f.fuelType && (
+                <FuelBreakdown
+                  liters={Number(f.liters)}
+                  base={fuelPrices?.[f.fuelType] || 0}
+                  taxes={taxes}
+                  total={calcedAmount}
+                />
+              )}
+            </>
+          )}
+
+          {/* ── COMBUSTIBLE normal: importe manual + tipo informativo + litros ── */}
           {isFuel && (
             <>
-              {/* Tipo de combustible — solo informativo, no afecta el importe */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="exp-amount" required>Importe ($)</Label>
+                  <Input
+                    id="exp-amount"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    value={f.amount}
+                    onChange={(e) => setF((p) => ({ ...p, amount: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="exp-date">Fecha</Label>
+                  <Input
+                    id="exp-date"
+                    type="date"
+                    value={f.date}
+                    onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label>Tipo de combustible</Label>
                 <div className="grid grid-cols-4 gap-1.5">
@@ -141,6 +230,33 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
                 />
               </div>
             </>
+          )}
+
+          {/* ── Otros tipos: importe + fecha ── */}
+          {!isAnyFuel && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="exp-amount" required>Importe ($)</Label>
+                <Input
+                  id="exp-amount"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  value={f.amount}
+                  onChange={(e) => setF((p) => ({ ...p, amount: e.target.value }))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="exp-date">Fecha</Label>
+                <Input
+                  id="exp-date"
+                  type="date"
+                  value={f.date}
+                  onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
+                />
+              </div>
+            </div>
           )}
 
           {/* Km odómetro */}
@@ -185,5 +301,33 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+function FuelBreakdown({ liters, base, taxes, total }) {
+  const sub = base * liters;
+  return (
+    <div className="rounded-xl bg-accent p-4 animate-rise">
+      <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-accent-foreground">
+        <Info className="size-3" aria-hidden />
+        Importe calculado GULF
+      </div>
+      <dl className="flex flex-col gap-1.5 text-[13px]">
+        <div className="flex justify-between text-accent-foreground/80">
+          <dt>Subtotal · {liters} L × ${Math.round(base).toLocaleString("es-AR")}</dt>
+          <dd className="tabular">${Math.round(sub).toLocaleString("es-AR")}</dd>
+        </div>
+        {taxes.map((t) => (
+          <div key={t.id} className="flex justify-between text-accent-foreground/80">
+            <dt>{t.label} · {t.pct}%</dt>
+            <dd className="tabular">${Math.round((sub * Number(t.pct)) / 100).toLocaleString("es-AR")}</dd>
+          </div>
+        ))}
+        <div className="mt-1 flex items-baseline justify-between border-t border-accent-foreground/15 pt-2">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-accent-foreground">Total</dt>
+          <dd className="font-display text-xl tabular text-accent-foreground">{$fmt(total)}</dd>
+        </div>
+      </dl>
+    </div>
   );
 }
