@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   Metric, VehicleAvatar, CategoryIcon, CategoryBars, RowActions, Delta, EmptyState,
 } from "@/components/shared";
+import { useState } from "react";
 
 export function ReportView({
   vehicles, expenses, odometer, fuelTypes,
@@ -16,7 +17,7 @@ export function ReportView({
   onDeleteExpense, onDeleteOdometer, onAddVehicle,
 }) {
   // Modo: "month" o "year"
-  const [rMode, setRMode] = React.useState("month");
+  const [rMode, setRMode] = useState("month");
 
   const rVehicles = rVid ? vehicles.filter((v) => v.id === rVid) : vehicles;
 
