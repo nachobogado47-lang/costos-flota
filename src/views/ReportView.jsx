@@ -4,6 +4,7 @@ import { $fmt, kmFmt, cat, totalOf, monthlyKm, atNoon } from "@/lib/calc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   Metric, VehicleAvatar, CategoryIcon, CategoryBars, RowActions, Delta, EmptyState,
 } from "@/components/shared";
@@ -14,24 +15,75 @@ export function ReportView({
   getExp, onNewExpense, onNewOdometer, onEditExpense, onEditOdometer,
   onDeleteExpense, onDeleteOdometer, onAddVehicle,
 }) {
+  // Modo: "month" o "year"
+  const [rMode, setRMode] = React.useState("month");
+
   const rVehicles = rVid ? vehicles.filter((v) => v.id === rVid) : vehicles;
-  const rExps = getExp(rVid, rMonth, rYear);
+
+  // En modo anual filtramos por año; en modo mensual por mes+año
+  const rExps = rMode === "year"
+    ? getExp(rVid, undefined, rYear)
+    : getExp(rVid, rMonth, rYear);
+
   const rTotal = totalOf(rExps);
-  const rTotalKm = rVehicles.reduce((s, v) => s + (monthlyKm(odometer, expenses, v, rMonth, rYear) || 0), 0);
+
+  const rTotalKm = rMode === "year"
+    ? rVehicles.reduce((s, v) => {
+        const allR = [
+          ...odometer.filter((o) => o.vehicleId === v.id && new Date(o.date).getFullYear() === rYear).map((o) => o.km),
+          ...expenses.filter((e) => e.vehicleId === v.id && e.km > 0 && new Date(e.date).getFullYear() === rYear).map((e) => e.km),
+        ];
+        const prevR = [
+          ...odometer.filter((o) => o.vehicleId === v.id && new Date(o.date).getFullYear() < rYear).map((o) => o.km),
+          ...expenses.filter((e) => e.vehicleId === v.id && e.km > 0 && new Date(e.date).getFullYear() < rYear).map((e) => e.km),
+        ];
+        if (!allR.length) return s;
+        const maxNow = Math.max(...allR);
+        const kmStart = prevR.length ? Math.max(...prevR) : (v.initialKm || 0);
+        return s + Math.max(0, maxNow - kmStart);
+      }, 0)
+    : rVehicles.reduce((s, v) => s + (monthlyKm(odometer, expenses, v, rMonth, rYear) || 0), 0);
+
   const rCostPerKm = rTotalKm > 0 ? Math.round(rTotal / rTotalKm) : null;
   const byCategory = CATEGORIES.map((c) => ({ id: c.id, amount: totalOf(rExps.filter((e) => e.type === c.id)) }));
 
+  const periodLabel = rMode === "year" ? `${rYear}` : `${MONTHS[rMonth]} ${rYear}`;
+
   return (
     <>
+      {/* Filtros */}
       <div className="mb-5 flex flex-wrap gap-2">
-        <Select
-          value={rMonth}
-          onChange={(e) => setRMonth(Number(e.target.value))}
-          className="min-w-[130px] flex-1 font-medium"
-          aria-label="Mes"
-        >
-          {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-        </Select>
+        {/* Selector modo */}
+        <div className="flex gap-0.5 rounded-lg bg-muted p-0.5" role="tablist">
+          {[{ id: "month", label: "Por mes" }, { id: "year", label: "Anual" }].map((m) => (
+            <button
+              key={m.id}
+              role="tab"
+              aria-selected={rMode === m.id}
+              onClick={() => setRMode(m.id)}
+              className={cn(
+                "rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all duration-150",
+                rMode === m.id ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Mes — solo en modo mensual */}
+        {rMode === "month" && (
+          <Select
+            value={rMonth}
+            onChange={(e) => setRMonth(Number(e.target.value))}
+            className="min-w-[130px] flex-1 font-medium"
+            aria-label="Mes"
+          >
+            {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+          </Select>
+        )}
+
+        {/* Año — siempre visible */}
         <Select
           value={rYear}
           onChange={(e) => setRYear(Number(e.target.value))}
@@ -40,6 +92,8 @@ export function ReportView({
         >
           {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
         </Select>
+
+        {/* Vehículo */}
         <Select
           value={rVid || ""}
           onChange={(e) => setRVid(e.target.value || null)}
@@ -62,7 +116,7 @@ export function ReportView({
       ) : rExps.length === 0 && rTotalKm === 0 ? (
         <EmptyState
           icon={Inbox}
-          title={`Sin datos para ${MONTHS[rMonth]} ${rYear}`}
+          title={`Sin datos para ${periodLabel}`}
           hint="Cargá gastos o registrá los km del odómetro para ver el informe."
         >
           <Button onClick={() => onNewExpense()}><Plus />Cargar gasto</Button>
@@ -90,7 +144,7 @@ export function ReportView({
               />
             )}
             <Metric
-              label="Gastos registrados" value={rExps.length} sub={`en ${MONTHS[rMonth]}`}
+              label="Gastos registrados" value={rExps.length} sub={`en ${periodLabel}`}
               tone="var(--insurance)" surface="var(--insurance-soft)"
               className="animate-rise" style={{ animationDelay: "150ms" }}
             />
@@ -109,7 +163,7 @@ export function ReportView({
           {rVehicles.map((v, i) => (
             <VehicleReportCard
               key={v.id}
-              v={v} index={i} rMonth={rMonth} rYear={rYear}
+              v={v} index={i} rMonth={rMonth} rYear={rYear} rMode={rMode}
               expenses={expenses} odometer={odometer} fuelTypes={fuelTypes} getExp={getExp}
               onEditExpense={onEditExpense} onEditOdometer={onEditOdometer}
               onDeleteExpense={onDeleteExpense} onDeleteOdometer={onDeleteOdometer}
@@ -132,24 +186,52 @@ function SectionLabel({ icon: Icon, children, className = "" }) {
 }
 
 function VehicleReportCard({
-  v, index, rMonth, rYear, expenses, odometer, fuelTypes, getExp,
+  v, index, rMonth, rYear, rMode, expenses, odometer, fuelTypes, getExp,
   onEditExpense, onEditOdometer, onDeleteExpense, onDeleteOdometer, onNewOdometerFor,
 }) {
-  const vExps = getExp(v.id, rMonth, rYear);
+  const vExps = rMode === "year"
+    ? getExp(v.id, undefined, rYear)
+    : getExp(v.id, rMonth, rYear);
+
   const vTotal = totalOf(vExps);
-  const vKm = monthlyKm(odometer, expenses, v, rMonth, rYear);
+
+  // Km recorridos
+  const vKm = rMode === "year"
+    ? (() => {
+        const allR = [
+          ...odometer.filter((o) => o.vehicleId === v.id && new Date(o.date).getFullYear() === rYear).map((o) => o.km),
+          ...expenses.filter((e) => e.vehicleId === v.id && e.km > 0 && new Date(e.date).getFullYear() === rYear).map((e) => e.km),
+        ];
+        const prevR = [
+          ...odometer.filter((o) => o.vehicleId === v.id && new Date(o.date).getFullYear() < rYear).map((o) => o.km),
+          ...expenses.filter((e) => e.vehicleId === v.id && e.km > 0 && new Date(e.date).getFullYear() < rYear).map((e) => e.km),
+        ];
+        if (!allR.length) return null;
+        return Math.max(0, Math.max(...allR) - (prevR.length ? Math.max(...prevR) : (v.initialKm || 0)));
+      })()
+    : monthlyKm(odometer, expenses, v, rMonth, rYear);
+
   const costPKm = vKm && vKm > 0 && vTotal > 0 ? Math.round(vTotal / vKm) : null;
   const fuelExps = vExps.filter((e) => e.type === "combustible");
   const totalL = fuelExps.reduce((s, e) => s + (e.liters || 0), 0);
 
-  const prevTotal = totalOf(getExp(v.id, rMonth === 0 ? 11 : rMonth - 1, rMonth === 0 ? rYear - 1 : rYear));
+  // Delta vs período anterior
+  const prevExps = rMode === "year"
+    ? getExp(v.id, undefined, rYear - 1)
+    : getExp(v.id, rMonth === 0 ? 11 : rMonth - 1, rMonth === 0 ? rYear - 1 : rYear);
+  const prevTotal = totalOf(prevExps);
   const diff = prevTotal > 0 ? ((vTotal - prevTotal) / prevTotal) * 100 : null;
 
   const vColor = VCOLORS[v.colorIdx || 0];
-  const odomThisMonth = odometer
+
+  const periodLabel = rMode === "year" ? `${rYear}` : `${MONTHS[rMonth]} ${rYear}`;
+
+  // Lecturas de odómetro del período
+  const odomPeriod = odometer
     .filter((o) => {
       const d = atNoon(o.date);
-      return o.vehicleId === v.id && d.getMonth() === rMonth && d.getFullYear() === rYear;
+      return o.vehicleId === v.id && d.getFullYear() === rYear &&
+        (rMode === "year" || d.getMonth() === rMonth);
     })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -206,13 +288,13 @@ function VehicleReportCard({
           )}
         </div>
 
-        {odomThisMonth.length > 0 && (
+        {odomPeriod.length > 0 && (
           <div className="mb-4 rounded-lg bg-service-soft p-3">
             <div className="mb-2 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.07em] text-service">
-              <Route className="size-2.5" aria-hidden />Lecturas del mes
+              <Route className="size-2.5" aria-hidden />Lecturas del período
             </div>
             <div className="flex flex-col gap-1">
-              {odomThisMonth.map((o) => (
+              {odomPeriod.map((o) => (
                 <div key={o.id} className="flex items-center justify-between gap-2 text-[13px]">
                   <span className="truncate text-service">
                     {atNoon(o.date).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })}
@@ -235,7 +317,7 @@ function VehicleReportCard({
 
         {vExps.length > 0 ? (
           <>
-            <SectionLabel>Gastos del mes</SectionLabel>
+            <SectionLabel>Gastos del período</SectionLabel>
             <div className="mb-5">
               <CategoryBars
                 items={CATEGORIES.map((c) => ({ id: c.id, amount: totalOf(vExps.filter((e) => e.type === c.id)) }))}
@@ -255,13 +337,13 @@ function VehicleReportCard({
             </div>
 
             <div className="mt-4 flex items-baseline justify-between border-t border-border pt-3">
-              <span className="text-[13px] font-medium text-muted-foreground">Total {MONTHS[rMonth]}</span>
+              <span className="text-[13px] font-medium text-muted-foreground">Total {periodLabel}</span>
               <span className="font-display text-lg tabular" style={{ color: vColor }}>{$fmt(vTotal)}</span>
             </div>
           </>
         ) : (
           <p className="py-2 text-center text-[13px] text-muted-foreground">
-            Sin gastos en {MONTHS[rMonth]} {rYear}.
+            Sin gastos en {periodLabel}.
           </p>
         )}
       </CardContent>
