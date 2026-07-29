@@ -16,6 +16,7 @@ import {
  */
 export const CATEGORIES = [
   { id: "combustible", label: "Combustible", Icon: Fuel,          tone: "var(--fuel)",      surface: "var(--fuel-soft)" },
+  { id: "combustible_gulf", label: "Combustible GULF", Icon: Fuel, tone: "var(--repair)", surface: "var(--repair-soft)" },
   { id: "service",     label: "Service",     Icon: Wrench,        tone: "var(--service)",   surface: "var(--service-soft)" },
   { id: "reparacion",  label: "Reparación",  Icon: Hammer,        tone: "var(--repair)",    surface: "var(--repair-soft)" },
   { id: "seguro",      label: "Seguro",      Icon: ShieldCheck,   tone: "var(--insurance)", surface: "var(--insurance-soft)" },
