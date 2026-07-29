@@ -17,7 +17,6 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
   const isGulf    = f.type === "combustible_gulf";
   const isAnyFuel = isFuel || isGulf;
 
-  // Solo Gulf calcula automático
   const calcedAmount = isGulf && f.liters && f.fuelType
     ? calcFuelAmount(Number(f.liters), f.fuelType, fuelPrices, taxes)
     : null;
@@ -47,7 +46,6 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
       <CardContent className="pt-5">
         <form onSubmit={handleSubmit} className="grid gap-5">
 
-          {/* Vehículo */}
           <div>
             <Label htmlFor="exp-vehicle" required>Vehículo</Label>
             <Select
@@ -62,7 +60,6 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
             </Select>
           </div>
 
-          {/* Tipo de gasto */}
           <div>
             <Label required>Tipo de gasto</Label>
             <div className="grid grid-cols-3 gap-1.5">
@@ -95,7 +92,6 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
             </div>
           </div>
 
-          {/* ── GULF: tipo de combustible + litros + desglose automático ── */}
           {isGulf && (
             <>
               <div>
@@ -152,7 +148,6 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
                 </div>
               </div>
 
-              {/* Desglose automático */}
               {calcedAmount !== null && Number(f.liters) > 0 && f.fuelType && (
                 <FuelBreakdown
                   liters={Number(f.liters)}
@@ -164,7 +159,6 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
             </>
           )}
 
-          {/* ── COMBUSTIBLE normal: importe manual + tipo informativo + litros ── */}
           {isFuel && (
             <>
               <div className="grid grid-cols-2 gap-3">
@@ -232,7 +226,6 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
             </>
           )}
 
-          {/* ── Otros tipos: importe + fecha ── */}
           {!isAnyFuel && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -259,7 +252,6 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
             </div>
           )}
 
-          {/* Km odómetro */}
           <div>
             <Label htmlFor="exp-km">
               Km odómetro <span className="font-normal normal-case tracking-normal opacity-70">(opcional)</span>
@@ -275,7 +267,6 @@ export function ExpenseForm({ initial, vehicles, fuelPrices, fuelTypes, taxes, o
             />
           </div>
 
-          {/* Nota */}
           <div>
             <Label htmlFor="exp-note">
               Nota <span className="font-normal normal-case tracking-normal opacity-70">(opcional)</span>
