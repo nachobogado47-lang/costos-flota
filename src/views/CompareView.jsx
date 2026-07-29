@@ -35,11 +35,33 @@ export function CompareView({
   }
 
   const stats = vehicles.map((v) => {
-    const vExps = cMode === "month" ? getExp(v.id, cMonth, cYear) : getExp(v.id);
+    // Gastos según modo
+    const vExps = cMode === "month"
+      ? getExp(v.id, cMonth, cYear)
+      : cMode === "year"
+        ? getExp(v.id, undefined, cYear)
+        : getExp(v.id);
+
     const totalGasto = totalOf(vExps);
+
+    // Km según modo
     const vKm = cMode === "month"
       ? (monthlyKm(odometer, expenses, v, cMonth, cYear) || 0)
-      : totalKm(odometer, expenses, v);
+      : cMode === "year"
+        ? (() => {
+            const allR = [
+              ...odometer.filter((o) => o.vehicleId === v.id && new Date(o.date).getFullYear() === cYear).map((o) => o.km),
+              ...expenses.filter((e) => e.vehicleId === v.id && e.km > 0 && new Date(e.date).getFullYear() === cYear).map((e) => e.km),
+            ];
+            const prevR = [
+              ...odometer.filter((o) => o.vehicleId === v.id && new Date(o.date).getFullYear() < cYear).map((o) => o.km),
+              ...expenses.filter((e) => e.vehicleId === v.id && e.km > 0 && new Date(e.date).getFullYear() < cYear).map((e) => e.km),
+            ];
+            if (!allR.length) return 0;
+            return Math.max(0, Math.max(...allR) - (prevR.length ? Math.max(...prevR) : (v.initialKm || 0)));
+          })()
+        : totalKm(odometer, expenses, v);
+
     const fuelExps = vExps.filter((e) => e.type === "combustible");
     const totalLitros = fuelExps.reduce((s, e) => s + (e.liters || 0), 0);
     const servicios = vExps.filter((e) => e.type === "service");
@@ -59,11 +81,14 @@ export function CompareView({
     };
   });
 
-  const period = cMode === "month" ? `${MONTHS[cMonth]} ${cYear}` : "Todo el período";
+  const period = cMode === "month"
+    ? `${MONTHS[cMonth]} ${cYear}`
+    : cMode === "year"
+      ? `Año ${cYear}`
+      : "Todo el período";
+
   const sum = (fn) => stats.reduce((s, x) => s + fn(x), 0);
 
-  // Sin movimientos ni km todas las filas se ocultarían y quedaría una tabla
-  // de ceros sin explicación.
   if (sum((x) => x.totalGasto) === 0 && sum((x) => x.vKm) === 0) {
     return (
       <div>
@@ -72,12 +97,12 @@ export function CompareView({
           icon={Inbox}
           title={`Sin datos para ${period.toLowerCase()}`}
           hint={
-            cMode === "month"
-              ? "Ninguna unidad registró gastos ni kilometraje en este mes. Probá con otro período o mirá el acumulado."
+            cMode !== "all"
+              ? "Ninguna unidad registró gastos ni kilometraje en este período. Probá con otro o mirá el acumulado."
               : "Todavía no hay gastos ni lecturas cargadas en la flota."
           }
         >
-          {cMode === "month" && (
+          {cMode !== "all" && (
             <Button variant="outline" onClick={() => setCMode("all")}>
               <Scale />Ver acumulado
             </Button>
@@ -88,16 +113,16 @@ export function CompareView({
   }
 
   const rows = [
-    { label: "Gasto total",           icon: Wallet,        values: stats.map((s) => s.totalGasto),        fmt: $fmt },
-    { label: "Km recorridos",         icon: Gauge,         values: stats.map((s) => s.vKm),               fmt: (v) => (v > 0 ? kmFmt(v) : "—") },
-    { label: "Costo por km",          icon: MapPin,        values: stats.map((s) => s.costPerKm || 0),    fmt: (v) => (v > 0 ? $fmt(v) : "—"), sub: "menor = más eficiente", invert: true },
-    { label: "Litros de combustible", icon: Fuel,          values: stats.map((s) => s.totalLitros),       fmt: (v) => (v > 0 ? `${v.toFixed(1)} L` : "—") },
-    { label: "Gasto en combustible",  icon: Fuel,          values: stats.map((s) => s.totalCombust),      fmt: $fmt },
-    { label: "Services realizados",   icon: Wrench,        values: stats.map((s) => s.servicios.length),  fmt: (v) => `${v} service${v !== 1 ? "s" : ""}` },
+    { label: "Gasto total",           icon: Wallet,        values: stats.map((s) => s.totalGasto),          fmt: $fmt },
+    { label: "Km recorridos",         icon: Gauge,         values: stats.map((s) => s.vKm),                 fmt: (v) => (v > 0 ? kmFmt(v) : "—") },
+    { label: "Costo por km",          icon: MapPin,        values: stats.map((s) => s.costPerKm || 0),      fmt: (v) => (v > 0 ? $fmt(v) : "—"), sub: "menor = más eficiente", invert: true },
+    { label: "Litros de combustible", icon: Fuel,          values: stats.map((s) => s.totalLitros),         fmt: (v) => (v > 0 ? `${v.toFixed(1)} L` : "—") },
+    { label: "Gasto en combustible",  icon: Fuel,          values: stats.map((s) => s.totalCombust),        fmt: $fmt },
+    { label: "Services realizados",   icon: Wrench,        values: stats.map((s) => s.servicios.length),    fmt: (v) => `${v} service${v !== 1 ? "s" : ""}` },
     { label: "Reparaciones",          icon: Hammer,        values: stats.map((s) => s.reparaciones.length), fmt: (v) => `${v} ${v === 1 ? "reparación" : "reparaciones"}` },
-    { label: "Mantenimiento",         icon: Wrench,        values: stats.map((s) => s.totalMant),         fmt: $fmt, sub: "service + reparaciones" },
-    { label: "Seguros",               icon: ShieldCheck,   values: stats.map((s) => s.totalSeguros),      fmt: $fmt },
-    { label: "Patentes",              icon: ClipboardList, values: stats.map((s) => s.totalPatentes),     fmt: $fmt },
+    { label: "Mantenimiento",         icon: Wrench,        values: stats.map((s) => s.totalMant),           fmt: $fmt, sub: "service + reparaciones" },
+    { label: "Seguros",               icon: ShieldCheck,   values: stats.map((s) => s.totalSeguros),        fmt: $fmt },
+    { label: "Patentes",              icon: ClipboardList, values: stats.map((s) => s.totalPatentes),       fmt: $fmt },
   ];
 
   return (
@@ -129,7 +154,11 @@ function Filters({ cMode, setCMode, cMonth, setCMonth, cYear, setCYear }) {
   return (
     <div className="mb-5 flex flex-wrap items-center gap-2">
       <div className="flex gap-0.5 rounded-lg bg-muted p-0.5" role="tablist">
-        {[{ id: "month", label: "Por mes" }, { id: "all", label: "Acumulado" }].map((m) => (
+        {[
+          { id: "month", label: "Por mes" },
+          { id: "year",  label: "Anual"   },
+          { id: "all",   label: "Acumulado" },
+        ].map((m) => (
           <button
             key={m.id}
             role="tab"
@@ -144,15 +173,19 @@ function Filters({ cMode, setCMode, cMonth, setCMonth, cYear, setCYear }) {
           </button>
         ))}
       </div>
+
+      {/* Mes — solo en modo mensual */}
       {cMode === "month" && (
-        <>
-          <Select value={cMonth} onChange={(e) => setCMonth(Number(e.target.value))} className="min-w-[130px] flex-1 font-medium" aria-label="Mes">
-            {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-          </Select>
-          <Select value={cYear} onChange={(e) => setCYear(Number(e.target.value))} className="w-[92px] shrink-0 font-medium tabular" aria-label="Año">
-            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-          </Select>
-        </>
+        <Select value={cMonth} onChange={(e) => setCMonth(Number(e.target.value))} className="min-w-[130px] flex-1 font-medium" aria-label="Mes">
+          {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+        </Select>
+      )}
+
+      {/* Año — en modo mensual y anual */}
+      {(cMode === "month" || cMode === "year") && (
+        <Select value={cYear} onChange={(e) => setCYear(Number(e.target.value))} className="w-[92px] shrink-0 font-medium tabular" aria-label="Año">
+          {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+        </Select>
       )}
     </div>
   );
@@ -162,7 +195,6 @@ function CompareRow({ label, icon: Icon, sub, values, fmt, stats, delay, invert 
   const max = Math.max(...values.map((x) => x || 0));
   if (max === 0) return null;
 
-  // En "costo por km" el mejor es el menor, así que la estrella va al mínimo.
   const positives = values.filter((v) => v > 0);
   const best = invert && positives.length ? Math.min(...positives) : max;
 
@@ -201,10 +233,7 @@ function CompareRow({ label, icon: Icon, sub, values, fmt, stats, delay, invert 
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
-                    <div
-                      className="text-sm font-semibold tabular"
-                      style={isBest ? { color: vc } : undefined}
-                    >
+                    <div className="text-sm font-semibold tabular" style={isBest ? { color: vc } : undefined}>
                       {fmt(val)}
                     </div>
                     {isBest && <TopBadge label={invert ? "Más eficiente" : "Mayor"} />}
