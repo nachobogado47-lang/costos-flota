@@ -153,6 +153,11 @@ export default function App() {
     });
   }
 
+  // ── Recalcular gastos Gulf ─────────────────────────────────────────────────
+  function updateExpenses(fn) {
+    update((p) => ({ ...p, expenses: fn(p.expenses) }));
+  }
+
   function getExp(vid, month, year) {
     return expenses.filter((e) => {
       const d = new Date(e.date);
@@ -378,6 +383,7 @@ export default function App() {
                 fuelTypes={fuelTypes}
                 setFuelTypes={(ft) => update({ fuelTypes: ft })}
                 expenses={expenses}
+                setExpenses={updateExpenses}
                 fuelHistory={fuelHistory}
                 setFuelHistory={(fn) => update((p) => ({ ...p, fuelHistory: typeof fn === "function" ? fn(p.fuelHistory) : fn }))}
                 taxes={taxes}
