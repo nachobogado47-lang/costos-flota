@@ -3,7 +3,7 @@ import {
   Check, Database, Fuel, History, Lock, Pencil, Percent, Plus, TriangleAlert, Upload, X,
 } from "lucide-react";
 import { DOT_COLORS } from "@/theme";
-import { calcFinalPrice, todayISO } from "@/lib/calc";
+import { calcFinalPrice, calcFuelAmount, todayISO } from "@/lib/calc";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip } from "@/components/ui/tooltip";
 
-/** Un id estable a partir del nombre, para que el gasto no dependa del label. */
 function slugify(label, taken) {
   const base = label.trim().toLowerCase()
     .normalize("NFD").replace(/[̀-ͯ]/g, "")
@@ -23,18 +22,19 @@ function slugify(label, taken) {
 }
 
 export function SettingsView({
-  fuelPrices, setFuelPrices, fuelTypes, setFuelTypes, expenses,
+  fuelPrices, setFuelPrices, fuelTypes, setFuelTypes, expenses, setExpenses,
   fuelHistory, setFuelHistory, taxes, setTaxes, toast, onImport,
 }) {
   const [editingPrices, setEditingPrices] = useState(false);
   const [draftPrices, setDraftPrices] = useState({ ...fuelPrices });
   const [draftTypes, setDraftTypes] = useState(fuelTypes.map((t) => ({ ...t })));
+  // Fecha desde la cual recalcular gastos Gulf al guardar precios
+  const [recalcFrom, setRecalcFrom] = useState("");
   const [editingTaxes, setEditingTaxes] = useState(false);
   const [draftTaxes, setDraftTaxes] = useState(taxes.map((t) => ({ ...t })));
   const [importing, setImporting] = useState(false);
   const fileInput = useRef(null);
 
-  /** Cuántos gastos quedarían huérfanos si se quita un tipo. */
   const usageOf = (id) => expenses.filter((e) => e.fuelType === id).length;
 
   function savePrices() {
@@ -49,16 +49,35 @@ export function SettingsView({
 
     const prices = Object.fromEntries(clean.map((t) => [t.id, Number(draftPrices[t.id]) || 0]));
 
+    // Recalcular gastos Gulf a partir de la fecha elegida
+    if (recalcFrom) {
+      const fromDate = new Date(recalcFrom + "T00:00:00");
+      setExpenses((prev) => prev.map((e) => {
+        if (e.type !== "combustible_gulf") return e;
+        if (!e.fuelType || !e.liters) return e;
+        const eDate = new Date(e.date + "T00:00:00");
+        if (eDate < fromDate) return e;
+        const newAmount = calcFuelAmount(e.liters, e.fuelType, prices, taxes);
+        return { ...e, amount: newAmount };
+      }));
+    }
+
     setFuelTypes(clean);
     setFuelPrices(prices);
     setFuelHistory((p) => [{ id: `${Date.now()}`, date: todayISO(), prices }, ...p]);
     setEditingPrices(false);
-    toast("Combustibles actualizados");
+    setRecalcFrom("");
+
+    const msg = recalcFrom
+      ? `Combustibles actualizados y gastos Gulf recalculados desde ${new Date(recalcFrom + "T12:00:00").toLocaleDateString("es-AR")}.`
+      : "Combustibles actualizados.";
+    toast(msg);
   }
 
   function startEditingPrices() {
     setDraftPrices({ ...fuelPrices });
     setDraftTypes(fuelTypes.map((t) => ({ ...t })));
+    setRecalcFrom("");
     setEditingPrices(true);
   }
 
@@ -111,6 +130,14 @@ export function SettingsView({
 
   const totalTaxPct = taxes.reduce((s, t) => s + Number(t.pct), 0);
 
+  // Cuántos gastos Gulf se recalcularían con la fecha elegida
+  const gulfToRecalc = recalcFrom
+    ? expenses.filter((e) => {
+        if (e.type !== "combustible_gulf" || !e.fuelType || !e.liters) return false;
+        return new Date(e.date + "T00:00:00") >= new Date(recalcFrom + "T00:00:00");
+      }).length
+    : 0;
+
   return (
     <div className="flex flex-col gap-3">
       {/* Precios */}
@@ -130,7 +157,7 @@ export function SettingsView({
                   <Button size="sm" onClick={savePrices} className="bg-service text-white hover:bg-service/90">
                     <Check />Guardar
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setEditingPrices(false)}>Cancelar</Button>
+                  <Button variant="outline" size="sm" onClick={() => { setEditingPrices(false); setRecalcFrom(""); }}>Cancelar</Button>
                 </div>
               )
             }
@@ -183,11 +210,62 @@ export function SettingsView({
                   </div>
                 );
               })}
+
               <Button variant="outline" size="sm" className="mt-1 w-full border-dashed" onClick={addFuelType}>
                 <Plus />Agregar combustible
               </Button>
+
+              {/* Sección de recálculo de gastos Gulf */}
+              <div className="mt-3 rounded-xl border border-border bg-muted/40 p-4">
+                <div className="mb-2 text-[13px] font-semibold">Recalcular gastos Combustible GULF</div>
+                <p className="mb-3 text-[12px] text-muted-foreground">
+                  Opcional. Si elegís una fecha, los gastos GULF cargados desde ese día se recalcularán automáticamente con los nuevos precios al guardar.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-1 flex-col gap-1 min-w-[180px]">
+                    <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                      Recalcular desde
+                    </label>
+                    <Input
+                      type="date"
+                      value={recalcFrom}
+                      onChange={(e) => setRecalcFrom(e.target.value)}
+                      aria-label="Recalcular gastos Gulf desde esta fecha"
+                    />
+                  </div>
+                  {recalcFrom && (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                        Gastos afectados
+                      </span>
+                      <span className={cn(
+                        "text-[15px] font-semibold tabular",
+                        gulfToRecalc > 0 ? "text-repair" : "text-muted-foreground",
+                      )}>
+                        {gulfToRecalc} {gulfToRecalc === 1 ? "gasto" : "gastos"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {recalcFrom && gulfToRecalc === 0 && (
+                  <p className="mt-2 text-[12px] text-muted-foreground">
+                    No hay gastos GULF cargados desde esa fecha.
+                  </p>
+                )}
+                {recalcFrom && gulfToRecalc > 0 && (
+                  <p className="mt-2 text-[12px] text-repair">
+                    Al guardar, {gulfToRecalc === 1 ? "ese gasto será recalculado" : `esos ${gulfToRecalc} gastos serán recalculados`} con los nuevos precios e impuestos.
+                  </p>
+                )}
+                {!recalcFrom && (
+                  <p className="mt-2 text-[12px] text-muted-foreground">
+                    Si no elegís fecha, los gastos anteriores no cambian.
+                  </p>
+                )}
+              </div>
+
               <Notice>
-                Los nuevos registros usarán estos precios. Los gastos ya cargados no cambian.
+                Los nuevos registros siempre usarán los precios actualizados.
               </Notice>
             </div>
           ) : (
@@ -346,8 +424,6 @@ export function SettingsView({
                     </span>
                     {i === 0 && <Badge variant="success">Actual</Badge>}
                   </div>
-                  {/* Se listan las claves del snapshot, no el catálogo actual:
-                      un tipo que ya no existe igual debe verse en su historial. */}
                   <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                     {Object.entries(h.prices).map(([id, price]) => (
                       <div key={id} className="text-[11px]">
@@ -370,7 +446,6 @@ export function SettingsView({
   );
 }
 
-/** Ciclo por la paleta: un clic pasa al siguiente color disponible. */
 function ColorPicker({ value, onChange, label }) {
   const idx = Math.max(0, DOT_COLORS.indexOf(value));
   return (
