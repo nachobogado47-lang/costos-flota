@@ -190,48 +190,46 @@ export default function App() {
 
   // ── Vehículos ─────────────────────────────────────────────
 
-  function saveVehicle(f) {
-    if (f.id) {
-      update((p) => ({
-        ...p,
-        vehicles: p.vehicles.map((v) =>
-          v.id === f.id
-            ? {
-                ...v,
-                ...f,
-                initialKm:
-                  Number(f.initialKm) || 0,
-              }
-            : v
-        ),
-      }));
+function saveVehicle(f) {
+  if (f.id) {
+    update((p) => ({
+      ...p,
+      vehicles: p.vehicles.map((v) =>
+        v.id === f.id
+          ? {
+              ...v,
+              ...f,
+              initialKm: Number(f.initialKm) || 0,
+              // Si se reactiva desde el formulario,
+              // soldAt queda en null.
+              soldAt: f.soldAt || null,
+            }
+          : v
+      ),
+    }));
 
-      toast("Vehículo actualizado");
-    } else {
-      update((p) => ({
-        ...p,
-        vehicles: [
-          ...p.vehicles,
-          {
-            ...f,
-            id: `${Date.now()}`,
-            initialKm:
-              Number(f.initialKm) || 0,
-            soldAt: "",
-            colorIdx:
-              p.vehicles.length %
-              VCOLORS.length,
-          },
-        ],
-      }));
+    toast("Vehículo actualizado");
+  } else {
+    update((p) => ({
+      ...p,
+      vehicles: [
+        ...p.vehicles,
+        {
+          ...f,
+          id: `${Date.now()}`,
+          initialKm: Number(f.initialKm) || 0,
+          colorIdx: p.vehicles.length % VCOLORS.length,
+          soldAt: null,
+        },
+      ],
+    }));
 
-      toast("Vehículo guardado");
-    }
-
-    setEditVehicle(null);
-    setView("fleet");
+    toast("Vehículo guardado");
   }
 
+  setEditVehicle(null);
+  setView("fleet");
+}
   function sellVehicle(id) {
     const v = vehicles.find(
       (x) => x.id === id
@@ -287,32 +285,66 @@ export default function App() {
   }
 
   function delVehicle(id) {
-    const v = vehicles.find(
-      (x) => x.id === id
-    );
+  const v = vehicles.find((x) => x.id === id);
 
-    askDel(
-      `Se eliminará DEFINITIVAMENTE ${
-        v?.name ?? "el vehículo"
-      } junto con todos sus gastos y lecturas de km. Esta acción no se puede deshacer.`,
-      () => {
-        update((p) => ({
-          ...p,
-          vehicles: p.vehicles.filter(
-            (x) => x.id !== id
-          ),
-          expenses: p.expenses.filter(
-            (e) => e.vehicleId !== id
-          ),
-          odometer: p.odometer.filter(
-            (o) => o.vehicleId !== id
-          ),
-        }));
+  askDel(
+    `Se eliminará ${v?.name ?? "el vehículo"} junto con todos sus gastos y lecturas de km.`,
+    () => {
+      update((p) => ({
+        ...p,
+        vehicles: p.vehicles.filter((x) => x.id !== id),
+        expenses: p.expenses.filter((e) => e.vehicleId !== id),
+        odometer: p.odometer.filter((o) => o.vehicleId !== id),
+      }));
 
-        toast("Vehículo eliminado definitivamente");
-      }
-    );
-  }
+      toast("Vehículo eliminado definitivamente");
+    }
+  );
+}
+function sellVehicle(id) {
+  const v = vehicles.find((x) => x.id === id);
+
+  if (!v) return;
+
+  askDel(
+    `¿Marcar ${v.name} (${v.plate}) como vendido? Se conservarán todos sus gastos y registros históricos.`,
+    () => {
+      update((p) => ({
+        ...p,
+        vehicles: p.vehicles.map((x) =>
+          x.id === id
+            ? {
+                ...x,
+                soldAt: todayISO(),
+              }
+            : x
+        ),
+      }));
+
+      toast("Vehículo marcado como vendido");
+    }
+  );
+}
+
+function reactivateVehicle(id) {
+  const v = vehicles.find((x) => x.id === id);
+
+  if (!v) return;
+
+  update((p) => ({
+    ...p,
+    vehicles: p.vehicles.map((x) =>
+      x.id === id
+        ? {
+            ...x,
+            soldAt: null,
+          }
+        : x
+    ),
+  }));
+
+  toast("Vehículo reactivado");
+}
 
   // ── Gastos ────────────────────────────────────────────────
 
@@ -1016,47 +1048,22 @@ export default function App() {
 
             {view === "fleet" &&
               !editVehicle && (
-                <FleetView
-                  vehicles={
-                    vehicles
-                  }
-                  expenses={
-                    expenses
-                  }
-                  odometer={
-                    odometer
-                  }
-                  getExp={
-                    getExp
-                  }
-                  onAddVehicle={
-                    openNewVehicle
-                  }
-                  onEditVehicle={(
-                    v
-                  ) => {
-                    closeForms();
-                    setEditVehicle(
-                      v
-                    );
-                  }}
-                  onDeleteVehicle={
-                    delVehicle
-                  }
-                  onSellVehicle={
-                    sellVehicle
-                  }
-                  onReactivateVehicle={
-                    reactivateVehicle
-                  }
-                  onNewExpense={
-                    openNewExpense
-                  }
-                  onNewOdometer={
-                    openNewOdometer
-                  }
-                />
-              )}
+<FleetView
+  vehicles={vehicles}
+  expenses={expenses}
+  odometer={odometer}
+  getExp={getExp}
+  onAddVehicle={openNewVehicle}
+  onEditVehicle={(v) => {
+    closeForms();
+    setEditVehicle(v);
+  }}
+  onDeleteVehicle={delVehicle}
+  onSellVehicle={sellVehicle}
+  onReactivateVehicle={reactivateVehicle}
+  onNewExpense={openNewExpense}
+  onNewOdometer={openNewOdometer}
+/>
 
             {view === "settings" &&
               !formOpen && (
