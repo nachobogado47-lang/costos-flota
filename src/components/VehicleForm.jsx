@@ -1,6 +1,5 @@
-```jsx
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,6 +55,8 @@ export function VehicleForm({
 
   const ok = f.name?.trim() && f.plate?.trim();
 
+  const isSold = Boolean(f.soldAt);
+
   async function handleSubmit(e) {
     e.preventDefault();
 
@@ -70,7 +71,12 @@ export function VehicleForm({
     }
   }
 
-  const sold = Boolean(f.soldAt);
+  function reactivate() {
+    setF((p) => ({
+      ...p,
+      soldAt: null,
+    }));
+  }
 
   return (
     <Card className="animate-rise">
@@ -79,6 +85,31 @@ export function VehicleForm({
           onSubmit={handleSubmit}
           className="grid grid-cols-2 gap-4"
         >
+          {isSold && (
+            <div className="col-span-2 rounded-lg bg-danger-soft px-3 py-3 text-[12px] text-danger">
+              <div className="mb-1 font-semibold">
+                Este vehículo está marcado como vendido.
+              </div>
+
+              {f.soldAt && (
+                <div>
+                  Fecha de venta: {formatDate(f.soldAt)}
+                </div>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={reactivate}
+              >
+                <RotateCcw />
+                Reactivar vehículo
+              </Button>
+            </div>
+          )}
+
           {FIELDS.map((fi) => (
             <div
               key={fi.k}
@@ -111,34 +142,8 @@ export function VehicleForm({
             </div>
           ))}
 
-          {sold && (
-            <div className="col-span-2">
-              <Label htmlFor="veh-soldAt">
-                Fecha de venta
-              </Label>
-
-              <Input
-                id="veh-soldAt"
-                type="date"
-                value={f.soldAt || ""}
-                onChange={(e) =>
-                  setF((p) => ({
-                    ...p,
-                    soldAt: e.target.value,
-                  }))
-                }
-              />
-
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                El vehículo está marcado como vendido. Su historial
-                de gastos y kilómetros se conserva.
-              </p>
-            </div>
-          )}
-
           <p className="col-span-2 -mt-1 text-[11px] text-muted-foreground">
-            Los km iniciales son el punto de partida para calcular
-            el recorrido mensual.
+            Los km iniciales son el punto de partida para calcular el recorrido mensual.
           </p>
 
           <div className="col-span-2 flex gap-2 border-t border-border pt-4">
@@ -168,5 +173,15 @@ export function VehicleForm({
     </Card>
   );
 }
-```
 
+function formatDate(date) {
+  if (!date) return "";
+
+  const parts = date.split("-");
+
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+
+  return date;
+}
