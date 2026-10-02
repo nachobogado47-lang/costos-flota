@@ -1,19 +1,38 @@
+```jsx
 import { useEffect, useState } from "react";
 import {
-  BarChart3, Car, Download, Moon, Plus, Receipt, Route, Scale, Settings2, Sun, Truck,
+  BarChart3,
+  Car,
+  Download,
+  Moon,
+  Plus,
+  Receipt,
+  Route,
+  Scale,
+  Settings2,
+  Sun,
+  Truck,
 } from "lucide-react";
+
 import { VCOLORS } from "@/theme";
 import { todayISO } from "@/lib/calc";
 import { useFleetStore } from "@/lib/useFleetStore";
 import { cn } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
-import { SyncBadge, ReportSkeleton } from "@/components/shared";
+
+import {
+  SyncBadge,
+  ReportSkeleton,
+} from "@/components/shared";
+
 import { ExpenseForm } from "@/components/ExpenseForm";
 import { OdometerForm } from "@/components/OdometerForm";
 import { VehicleForm } from "@/components/VehicleForm";
+
 import { ReportView } from "@/views/ReportView";
 import { CompareView } from "@/views/CompareView";
 import { OdometerView } from "@/views/OdometerView";
@@ -22,28 +41,76 @@ import { FleetView } from "@/views/FleetView";
 import { SettingsView } from "@/views/SettingsView";
 
 const NAV = [
-  { id: "report",   label: "Informe",     Icon: BarChart3 },
-  { id: "compare",  label: "Comparación", Icon: Scale },
-  { id: "odometer", label: "Odómetro",    Icon: Route },
-  { id: "log",      label: "Gastos",      Icon: Receipt },
-  { id: "fleet",    label: "Flota",       Icon: Car },
-  { id: "settings", label: "Precios",     Icon: Settings2 },
+  {
+    id: "report",
+    label: "Informe",
+    Icon: BarChart3,
+  },
+  {
+    id: "compare",
+    label: "Comparación",
+    Icon: Scale,
+  },
+  {
+    id: "odometer",
+    label: "Odómetro",
+    Icon: Route,
+  },
+  {
+    id: "log",
+    label: "Gastos",
+    Icon: Receipt,
+  },
+  {
+    id: "fleet",
+    label: "Flota",
+    Icon: Car,
+  },
+  {
+    id: "settings",
+    label: "Precios",
+    Icon: Settings2,
+  },
 ];
 
 function useTheme() {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const [dark, setDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("fleet2:theme", dark ? "dark" : "light");
+    localStorage.setItem(
+      "fleet2:theme",
+      dark ? "dark" : "light"
+    );
   }, [dark]);
 
-  return [dark, () => setDark((d) => !d)];
+  return [
+    dark,
+    () => setDark((d) => !d),
+  ];
 }
 
 export default function App() {
-  const { state, update, replaceAll, loaded, syncState } = useFleetStore();
-  const { vehicles, expenses, odometer, fuelPrices, fuelTypes, fuelHistory, taxes } = state;
+  const {
+    state,
+    update,
+    replaceAll,
+    loaded,
+    syncState,
+  } = useFleetStore();
+
+  const {
+    vehicles,
+    expenses,
+    odometer,
+    fuelPrices,
+    fuelTypes,
+    fuelHistory,
+    taxes,
+  } = state;
+
   const toast = useToast();
   const [dark, toggleTheme] = useTheme();
 
@@ -55,19 +122,65 @@ export default function App() {
   const [editVehicle, setEditVehicle] = useState(null);
 
   const now = new Date();
-  const [rMonth, setRMonth] = useState(now.getMonth());
-  const [rYear, setRYear] = useState(now.getFullYear());
+
+  const [rMonth, setRMonth] = useState(
+    now.getMonth()
+  );
+  const [rYear, setRYear] = useState(
+    now.getFullYear()
+  );
   const [rVid, setRVid] = useState(null);
 
-  const [cMonth, setCMonth] = useState(now.getMonth());
-  const [cYear, setCYear] = useState(now.getFullYear());
+  const [cMonth, setCMonth] = useState(
+    now.getMonth()
+  );
+  const [cYear, setCYear] = useState(
+    now.getFullYear()
+  );
   const [cMode, setCMode] = useState("month");
 
-  const askDel = (msg, fn) => setConfirm({ msg, onConfirm: fn });
+  const askDel = (msg, fn) =>
+    setConfirm({
+      msg,
+      onConfirm: fn,
+      type: "delete",
+    });
 
-  const blankExpense = { vehicleId: vehicles[0]?.id || "", type: "combustible", fuelType: fuelTypes[0]?.id || "", amount: "", date: todayISO(), km: "", note: "", liters: "" };
-  const blankOdometer = { vehicleId: vehicles[0]?.id || "", km: "", date: todayISO(), note: "" };
-  const blankVehicle = { name: "", plate: "", brand: "", model: "", year: "", initialKm: "" };
+  const askAction = (msg, fn) =>
+    setConfirm({
+      msg,
+      onConfirm: fn,
+      type: "action",
+    });
+
+  const blankExpense = {
+    vehicleId: vehicles.find((v) => !v.soldAt)?.id || "",
+    type: "combustible",
+    fuelType: fuelTypes[0]?.id || "",
+    amount: "",
+    date: todayISO(),
+    km: "",
+    note: "",
+    liters: "",
+  };
+
+  const blankOdometer = {
+    vehicleId:
+      vehicles.find((v) => !v.soldAt)?.id || "",
+    km: "",
+    date: todayISO(),
+    note: "",
+  };
+
+  const blankVehicle = {
+    name: "",
+    plate: "",
+    brand: "",
+    model: "",
+    year: "",
+    initialKm: "",
+    soldAt: "",
+  };
 
   function closeForms() {
     setEditExpense(null);
@@ -75,108 +188,326 @@ export default function App() {
     setEditVehicle(null);
   }
 
-  // ── Vehículos ──────────────────────────────────────────────────────────────
+  // ── Vehículos ─────────────────────────────────────────────
+
   function saveVehicle(f) {
     if (f.id) {
       update((p) => ({
         ...p,
-        vehicles: p.vehicles.map((v) => (v.id === f.id ? { ...v, ...f, initialKm: Number(f.initialKm) || 0 } : v)),
+        vehicles: p.vehicles.map((v) =>
+          v.id === f.id
+            ? {
+                ...v,
+                ...f,
+                initialKm:
+                  Number(f.initialKm) || 0,
+              }
+            : v
+        ),
       }));
+
       toast("Vehículo actualizado");
     } else {
       update((p) => ({
         ...p,
-        vehicles: [...p.vehicles, {
-          ...f,
-          id: `${Date.now()}`,
-          initialKm: Number(f.initialKm) || 0,
-          colorIdx: p.vehicles.length % VCOLORS.length,
-        }],
+        vehicles: [
+          ...p.vehicles,
+          {
+            ...f,
+            id: `${Date.now()}`,
+            initialKm:
+              Number(f.initialKm) || 0,
+            soldAt: "",
+            colorIdx:
+              p.vehicles.length %
+              VCOLORS.length,
+          },
+        ],
       }));
+
       toast("Vehículo guardado");
     }
+
     setEditVehicle(null);
     setView("fleet");
   }
 
-  function delVehicle(id) {
-    const v = vehicles.find((x) => x.id === id);
-    askDel(`Se eliminará ${v?.name ?? "el vehículo"} junto con todos sus gastos y lecturas de km.`, () => {
-      update((p) => ({
-        ...p,
-        vehicles: p.vehicles.filter((x) => x.id !== id),
-        expenses: p.expenses.filter((e) => e.vehicleId !== id),
-        odometer: p.odometer.filter((o) => o.vehicleId !== id),
-      }));
-      toast("Vehículo eliminado");
-    });
+  function sellVehicle(id) {
+    const v = vehicles.find(
+      (x) => x.id === id
+    );
+
+    if (!v) return;
+
+    askAction(
+      `¿Querés marcar ${v.name} como vendido? Se conservarán todos sus gastos y kilómetros históricos.`,
+      () => {
+        update((p) => ({
+          ...p,
+          vehicles: p.vehicles.map((vehicle) =>
+            vehicle.id === id
+              ? {
+                  ...vehicle,
+                  soldAt: todayISO(),
+                }
+              : vehicle
+          ),
+        }));
+
+        toast("Vehículo marcado como vendido");
+      }
+    );
   }
 
-  // ── Gastos ─────────────────────────────────────────────────────────────────
+  function reactivateVehicle(id) {
+    const v = vehicles.find(
+      (x) => x.id === id
+    );
+
+    if (!v) return;
+
+    askAction(
+      `¿Querés reactivar ${v.name}? Volverá a estar disponible para cargar gastos y kilómetros.`,
+      () => {
+        update((p) => ({
+          ...p,
+          vehicles: p.vehicles.map((vehicle) =>
+            vehicle.id === id
+              ? {
+                  ...vehicle,
+                  soldAt: "",
+                }
+              : vehicle
+          ),
+        }));
+
+        toast("Vehículo reactivado");
+      }
+    );
+  }
+
+  function delVehicle(id) {
+    const v = vehicles.find(
+      (x) => x.id === id
+    );
+
+    askDel(
+      `Se eliminará DEFINITIVAMENTE ${
+        v?.name ?? "el vehículo"
+      } junto con todos sus gastos y lecturas de km. Esta acción no se puede deshacer.`,
+      () => {
+        update((p) => ({
+          ...p,
+          vehicles: p.vehicles.filter(
+            (x) => x.id !== id
+          ),
+          expenses: p.expenses.filter(
+            (e) => e.vehicleId !== id
+          ),
+          odometer: p.odometer.filter(
+            (o) => o.vehicleId !== id
+          ),
+        }));
+
+        toast("Vehículo eliminado definitivamente");
+      }
+    );
+  }
+
+  // ── Gastos ────────────────────────────────────────────────
+
   function saveExpense(f) {
-    const data = { ...f, amount: Number(f.amount), km: Number(f.km) || 0, liters: Number(f.liters) || 0 };
+    const vehicle = vehicles.find(
+      (v) => v.id === f.vehicleId
+    );
+
+    // Evita cargar nuevos gastos a vehículos vendidos
+    if (vehicle?.soldAt && !f.id) {
+      toast(
+        "No se pueden cargar gastos a un vehículo vendido"
+      );
+      return;
+    }
+
+    const data = {
+      ...f,
+      amount: Number(f.amount),
+      km: Number(f.km) || 0,
+      liters: Number(f.liters) || 0,
+    };
+
     if (f.id) {
-      update((p) => ({ ...p, expenses: p.expenses.map((e) => (e.id === f.id ? data : e)) }));
+      update((p) => ({
+        ...p,
+        expenses: p.expenses.map((e) =>
+          e.id === f.id ? data : e
+        ),
+      }));
+
       toast("Gasto actualizado");
     } else {
-      update((p) => ({ ...p, expenses: [...p.expenses, { ...data, id: `${Date.now()}` }] }));
+      update((p) => ({
+        ...p,
+        expenses: [
+          ...p.expenses,
+          {
+            ...data,
+            id: `${Date.now()}`,
+          },
+        ],
+      }));
+
       toast("Gasto registrado");
     }
+
     setEditExpense(null);
     setView("log");
   }
 
   function delExpense(id) {
-    askDel("Se eliminará este gasto. La acción no se puede deshacer.", () => {
-      update((p) => ({ ...p, expenses: p.expenses.filter((e) => e.id !== id) }));
-      toast("Gasto eliminado");
-    });
+    askDel(
+      "Se eliminará este gasto. La acción no se puede deshacer.",
+      () => {
+        update((p) => ({
+          ...p,
+          expenses: p.expenses.filter(
+            (e) => e.id !== id
+          ),
+        }));
+
+        toast("Gasto eliminado");
+      }
+    );
   }
 
-  // ── Odómetro ───────────────────────────────────────────────────────────────
+  // ── Odómetro ──────────────────────────────────────────────
+
   function saveOdometer(f) {
-    const data = { ...f, km: Number(f.km) };
+    const vehicle = vehicles.find(
+      (v) => v.id === f.vehicleId
+    );
+
+    // Evita nuevas lecturas para vendidos
+    if (vehicle?.soldAt && !f.id) {
+      toast(
+        "No se pueden cargar kilómetros a un vehículo vendido"
+      );
+      return;
+    }
+
+    const data = {
+      ...f,
+      km: Number(f.km),
+    };
+
     if (f.id) {
-      update((p) => ({ ...p, odometer: p.odometer.map((o) => (o.id === f.id ? data : o)) }));
+      update((p) => ({
+        ...p,
+        odometer: p.odometer.map((o) =>
+          o.id === f.id ? data : o
+        ),
+      }));
+
       toast("Lectura actualizada");
     } else {
-      update((p) => ({ ...p, odometer: [...p.odometer, { ...data, id: `${Date.now()}` }] }));
+      update((p) => ({
+        ...p,
+        odometer: [
+          ...p.odometer,
+          {
+            ...data,
+            id: `${Date.now()}`,
+          },
+        ],
+      }));
+
       toast("Lectura guardada");
     }
+
     setEditOdometer(null);
   }
 
   function delOdometer(id) {
-    askDel("Se eliminará esta lectura de odómetro.", () => {
-      update((p) => ({ ...p, odometer: p.odometer.filter((o) => o.id !== id) }));
-      toast("Lectura eliminada");
-    });
+    askDel(
+      "Se eliminará esta lectura de odómetro.",
+      () => {
+        update((p) => ({
+          ...p,
+          odometer: p.odometer.filter(
+            (o) => o.id !== id
+          ),
+        }));
+
+        toast("Lectura eliminada");
+      }
+    );
   }
 
-  // ── Recalcular gastos Gulf ─────────────────────────────────────────────────
+  // ── Recalcular gastos Gulf ────────────────────────────────
+
   function updateExpenses(fn) {
-    update((p) => ({ ...p, expenses: fn(p.expenses) }));
+    update((p) => ({
+      ...p,
+      expenses: fn(p.expenses),
+    }));
   }
 
   function getExp(vid, month, year) {
     return expenses.filter((e) => {
       const d = new Date(e.date);
-      return (!vid || e.vehicleId === vid)
-        && (month === undefined || d.getMonth() === month)
-        && (year === undefined || d.getFullYear() === year);
+
+      return (
+        (!vid || e.vehicleId === vid) &&
+        (month === undefined ||
+          d.getMonth() === month) &&
+        (year === undefined ||
+          d.getFullYear() === year)
+      );
     });
   }
 
+  // ── Exportar / importar ──────────────────────────────────
+
   function exportData() {
-    const data = { exportedAt: new Date().toISOString(), vehicles, expenses, odometer, fuelPrices, fuelTypes, fuelHistory, taxes };
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-    const a = document.createElement("a");
+    const data = {
+      exportedAt:
+        new Date().toISOString(),
+      vehicles,
+      expenses,
+      odometer,
+      fuelPrices,
+      fuelTypes,
+      fuelHistory,
+      taxes,
+    };
+
+    const url = URL.createObjectURL(
+      new Blob(
+        [
+          JSON.stringify(
+            data,
+            null,
+            2
+          ),
+        ],
+        {
+          type: "application/json",
+        }
+      )
+    );
+
+    const a =
+      document.createElement("a");
+
     a.href = url;
     a.download = `flota-datos-${todayISO()}.json`;
+
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+
     URL.revokeObjectURL(url);
+
     toast("Backup descargado");
   }
 
@@ -186,29 +517,111 @@ export default function App() {
     setView("report");
   }
 
-  const openNewExpense = (vehicleId) => { closeForms(); setEditExpense({ ...blankExpense, ...(vehicleId ? { vehicleId } : {}) }); };
-  const openNewOdometer = (vehicleId) => { closeForms(); setEditOdometer({ ...blankOdometer, ...(vehicleId ? { vehicleId } : {}) }); };
-  const openNewVehicle = () => { closeForms(); setView("fleet"); setEditVehicle(blankVehicle); };
+  const openNewExpense = (
+    vehicleId
+  ) => {
+    closeForms();
 
-  const formOpen = Boolean(editExpense || editOdometer || editVehicle);
+    const selectedVehicle =
+      vehicleId
+        ? vehicles.find(
+            (v) => v.id === vehicleId
+          )
+        : null;
+
+    if (selectedVehicle?.soldAt) {
+      toast(
+        "No se pueden cargar gastos a un vehículo vendido"
+      );
+      return;
+    }
+
+    setEditExpense({
+      ...blankExpense,
+      ...(vehicleId
+        ? { vehicleId }
+        : {}),
+    });
+  };
+
+  const openNewOdometer = (
+    vehicleId
+  ) => {
+    closeForms();
+
+    const selectedVehicle =
+      vehicleId
+        ? vehicles.find(
+            (v) => v.id === vehicleId
+          )
+        : null;
+
+    if (selectedVehicle?.soldAt) {
+      toast(
+        "No se pueden cargar kilómetros a un vehículo vendido"
+      );
+      return;
+    }
+
+    setEditOdometer({
+      ...blankOdometer,
+      ...(vehicleId
+        ? { vehicleId }
+        : {}),
+    });
+  };
+
+  const openNewVehicle = () => {
+    closeForms();
+    setView("fleet");
+    setEditVehicle(blankVehicle);
+  };
+
+  const formOpen = Boolean(
+    editExpense ||
+      editOdometer ||
+      editVehicle
+  );
 
   return (
     <div className="min-h-dvh bg-background pb-20">
       <Dialog
         open={Boolean(confirm)}
-        onClose={() => setConfirm(null)}
-        title="¿Confirmar eliminación?"
+        onClose={() =>
+          setConfirm(null)
+        }
+        title={
+          confirm?.type === "action"
+            ? "¿Confirmar acción?"
+            : "¿Confirmar eliminación?"
+        }
         description={confirm?.msg}
         footer={
           <>
             <Button
-              variant="destructive"
+              variant={
+                confirm?.type === "delete"
+                  ? "destructive"
+                  : "default"
+              }
               className="flex-1"
-              onClick={() => { confirm.onConfirm(); setConfirm(null); }}
+              onClick={() => {
+                confirm.onConfirm();
+                setConfirm(null);
+              }}
             >
-              Sí, eliminar
+              {confirm?.type === "delete"
+                ? "Sí, eliminar"
+                : "Confirmar"}
             </Button>
-            <Button variant="outline" className="flex-1" onClick={() => setConfirm(null)}>
+
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() =>
+                setConfirm(null)
+              }
+            >
               Cancelar
             </Button>
           </>
@@ -219,58 +632,154 @@ export default function App() {
         <div className="mx-auto max-w-3xl px-5">
           <div className="flex items-center justify-between gap-3 pt-3.5">
             <div className="flex items-center gap-2.5">
-              <span className="flex size-9 items-center justify-center rounded-xl bg-foreground text-background" aria-hidden>
+              <span
+                className="flex size-9 items-center justify-center rounded-xl bg-foreground text-background"
+                aria-hidden
+              >
                 <Truck className="size-4.5" />
               </span>
+
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="font-display text-lg leading-none">Flota</h1>
-                  {loaded && <SyncBadge state={syncState} />}
+                  <h1 className="font-display text-lg leading-none">
+                    Flota
+                  </h1>
+
+                  {loaded && (
+                    <SyncBadge
+                      state={syncState}
+                    />
+                  )}
                 </div>
+
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  {loaded ? `${vehicles.length} ${vehicles.length === 1 ? "vehículo" : "vehículos"}` : "Cargando…"}
+                  {loaded
+                    ? `${vehicles.length} ${
+                        vehicles.length === 1
+                          ? "vehículo"
+                          : "vehículos"
+                      }`
+                    : "Cargando…"}
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-1.5">
-              <Tooltip label={dark ? "Modo claro" : "Modo oscuro"} side="bottom">
-                <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={dark ? "Activar modo claro" : "Activar modo oscuro"}>
-                  {dark ? <Sun /> : <Moon />}
+              <Tooltip
+                label={
+                  dark
+                    ? "Modo claro"
+                    : "Modo oscuro"
+                }
+                side="bottom"
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  aria-label={
+                    dark
+                      ? "Activar modo claro"
+                      : "Activar modo oscuro"
+                  }
+                >
+                  {dark ? (
+                    <Sun />
+                  ) : (
+                    <Moon />
+                  )}
                 </Button>
               </Tooltip>
 
-              {loaded && (view === "report" || view === "log") && (
-                <Button size="sm" onClick={() => openNewExpense()}><Plus />Gasto</Button>
-              )}
-              {loaded && (view === "report" || view === "odometer") && (
-                <Button variant="outline" size="sm" onClick={() => openNewOdometer()}><Route />Km</Button>
-              )}
-              {loaded && view === "fleet" && (
-                <Button size="sm" onClick={openNewVehicle}><Plus />Vehículo</Button>
-              )}
-              {loaded && view === "settings" && (
-                <Button variant="outline" size="sm" onClick={exportData}><Download />Exportar</Button>
-              )}
+              {loaded &&
+                (view === "report" ||
+                  view === "log") && (
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      openNewExpense()
+                    }
+                  >
+                    <Plus />
+                    Gasto
+                  </Button>
+                )}
+
+              {loaded &&
+                (view === "report" ||
+                  view === "odometer") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      openNewOdometer()
+                    }
+                  >
+                    <Route />
+                    Km
+                  </Button>
+                )}
+
+              {loaded &&
+                view === "fleet" && (
+                  <Button
+                    size="sm"
+                    onClick={
+                      openNewVehicle
+                    }
+                  >
+                    <Plus />
+                    Vehículo
+                  </Button>
+                )}
+
+              {loaded &&
+                view === "settings" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={
+                      exportData
+                    }
+                  >
+                    <Download />
+                    Exportar
+                  </Button>
+                )}
             </div>
           </div>
 
-          <nav className="-mx-1 mt-3 flex gap-0.5 overflow-x-auto px-1" aria-label="Secciones">
+          <nav
+            className="-mx-1 mt-3 flex gap-0.5 overflow-x-auto px-1"
+            aria-label="Secciones"
+          >
             {NAV.map((n) => {
-              const active = view === n.id;
+              const active =
+                view === n.id;
+
               return (
                 <button
                   key={n.id}
-                  onClick={() => { setView(n.id); closeForms(); }}
-                  aria-current={active ? "page" : undefined}
+                  onClick={() => {
+                    setView(n.id);
+                    closeForms();
+                  }}
+                  aria-current={
+                    active
+                      ? "page"
+                      : undefined
+                  }
                   className={cn(
                     "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 pb-2.5 pt-1 text-[13px] transition-colors",
                     active
                       ? "border-primary font-semibold text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
+                      : "border-transparent text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <n.Icon className="size-3.5" aria-hidden />
+                  <n.Icon
+                    className="size-3.5"
+                    aria-hidden
+                  />
                   {n.label}
                 </button>
               );
@@ -285,16 +794,26 @@ export default function App() {
         ) : (
           <>
             {editExpense && (
-              <FormShell title={editExpense.id ? "Editar gasto" : "Nuevo gasto"}>
+              <FormShell
+                title={
+                  editExpense.id
+                    ? "Editar gasto"
+                    : "Nuevo gasto"
+                }
+              >
                 <ExpenseForm
                   initial={editExpense}
                   vehicles={vehicles}
                   fuelPrices={fuelPrices}
                   fuelTypes={fuelTypes}
                   taxes={taxes}
-                  isEdit={Boolean(editExpense.id)}
+                  isEdit={Boolean(
+                    editExpense.id
+                  )}
                   onSave={saveExpense}
-                  onCancel={() => setEditExpense(null)}
+                  onCancel={() =>
+                    setEditExpense(null)
+                  }
                 />
               </FormShell>
             )}
@@ -302,96 +821,305 @@ export default function App() {
             {editOdometer && (
               <FormShell>
                 <OdometerForm
-                  initial={editOdometer}
+                  initial={
+                    editOdometer
+                  }
                   vehicles={vehicles}
                   odometer={odometer}
                   expenses={expenses}
-                  isEdit={Boolean(editOdometer.id)}
+                  isEdit={Boolean(
+                    editOdometer.id
+                  )}
                   onSave={saveOdometer}
-                  onCancel={() => setEditOdometer(null)}
+                  onCancel={() =>
+                    setEditOdometer(null)
+                  }
                 />
               </FormShell>
             )}
 
             {editVehicle && (
-              <FormShell title={editVehicle.id ? "Editar vehículo" : "Nuevo vehículo"}>
+              <FormShell
+                title={
+                  editVehicle.id
+                    ? "Editar vehículo"
+                    : "Nuevo vehículo"
+                }
+              >
                 <VehicleForm
                   initial={editVehicle}
-                  isEdit={Boolean(editVehicle.id)}
+                  isEdit={Boolean(
+                    editVehicle.id
+                  )}
                   onSave={saveVehicle}
-                  onCancel={() => setEditVehicle(null)}
+                  onCancel={() =>
+                    setEditVehicle(null)
+                  }
                 />
               </FormShell>
             )}
 
-            {view === "report" && !editExpense && !editOdometer && (
-              <ReportView
-                vehicles={vehicles} expenses={expenses} odometer={odometer} fuelTypes={fuelTypes}
-                rMonth={rMonth} setRMonth={setRMonth} rYear={rYear} setRYear={setRYear}
-                rVid={rVid} setRVid={setRVid} getExp={getExp}
-                onNewExpense={openNewExpense} onNewOdometer={openNewOdometer}
-                onEditExpense={(e) => { closeForms(); setEditExpense(e); }}
-                onEditOdometer={(o) => { closeForms(); setEditOdometer(o); }}
-                onDeleteExpense={delExpense} onDeleteOdometer={delOdometer}
-                onAddVehicle={openNewVehicle}
-              />
-            )}
+            {view === "report" &&
+              !editExpense &&
+              !editOdometer && (
+                <ReportView
+                  vehicles={vehicles}
+                  expenses={expenses}
+                  odometer={odometer}
+                  fuelTypes={
+                    fuelTypes
+                  }
+                  rMonth={rMonth}
+                  setRMonth={
+                    setRMonth
+                  }
+                  rYear={rYear}
+                  setRYear={
+                    setRYear
+                  }
+                  rVid={rVid}
+                  setRVid={
+                    setRVid
+                  }
+                  getExp={getExp}
+                  onNewExpense={
+                    openNewExpense
+                  }
+                  onNewOdometer={
+                    openNewOdometer
+                  }
+                  onEditExpense={(
+                    e
+                  ) => {
+                    closeForms();
+                    setEditExpense(
+                      e
+                    );
+                  }}
+                  onEditOdometer={(
+                    o
+                  ) => {
+                    closeForms();
+                    setEditOdometer(
+                      o
+                    );
+                  }}
+                  onDeleteExpense={
+                    delExpense
+                  }
+                  onDeleteOdometer={
+                    delOdometer
+                  }
+                  onAddVehicle={
+                    openNewVehicle
+                  }
+                />
+              )}
 
-            {view === "compare" && !formOpen && (
-              <CompareView
-                vehicles={vehicles} expenses={expenses} odometer={odometer}
-                cMode={cMode} setCMode={setCMode} cMonth={cMonth} setCMonth={setCMonth}
-                cYear={cYear} setCYear={setCYear} getExp={getExp}
-                onAddVehicle={openNewVehicle}
-              />
-            )}
+            {view === "compare" &&
+              !formOpen && (
+                <CompareView
+                  vehicles={
+                    vehicles
+                  }
+                  expenses={
+                    expenses
+                  }
+                  odometer={
+                    odometer
+                  }
+                  cMode={cMode}
+                  setCMode={
+                    setCMode
+                  }
+                  cMonth={
+                    cMonth
+                  }
+                  setCMonth={
+                    setCMonth
+                  }
+                  cYear={
+                    cYear
+                  }
+                  setCYear={
+                    setCYear
+                  }
+                  getExp={
+                    getExp
+                  }
+                  onAddVehicle={
+                    openNewVehicle
+                  }
+                />
+              )}
 
-            {view === "odometer" && !editOdometer && (
-              <OdometerView
-                vehicles={vehicles} expenses={expenses} odometer={odometer}
-                onNewOdometer={openNewOdometer}
-                onEditOdometer={(o) => { closeForms(); setEditOdometer(o); }}
-                onDeleteOdometer={delOdometer}
-                onAddVehicle={openNewVehicle}
-              />
-            )}
+            {view === "odometer" &&
+              !editOdometer && (
+                <OdometerView
+                  vehicles={
+                    vehicles
+                  }
+                  expenses={
+                    expenses
+                  }
+                  odometer={
+                    odometer
+                  }
+                  onNewOdometer={
+                    openNewOdometer
+                  }
+                  onEditOdometer={(
+                    o
+                  ) => {
+                    closeForms();
+                    setEditOdometer(
+                      o
+                    );
+                  }}
+                  onDeleteOdometer={
+                    delOdometer
+                  }
+                  onAddVehicle={
+                    openNewVehicle
+                  }
+                />
+              )}
 
-            {view === "log" && !editExpense && (
-              <LogView
-                vehicles={vehicles} expenses={expenses} fuelTypes={fuelTypes}
-                onNewExpense={openNewExpense}
-                onEditExpense={(e) => { closeForms(); setEditExpense(e); }}
-                onDeleteExpense={delExpense}
-              />
-            )}
+            {view === "log" &&
+              !editExpense && (
+                <LogView
+                  vehicles={
+                    vehicles
+                  }
+                  expenses={
+                    expenses
+                  }
+                  fuelTypes={
+                    fuelTypes
+                  }
+                  onNewExpense={
+                    openNewExpense
+                  }
+                  onEditExpense={(
+                    e
+                  ) => {
+                    closeForms();
+                    setEditExpense(
+                      e
+                    );
+                  }}
+                  onDeleteExpense={
+                    delExpense
+                  }
+                />
+              )}
 
-            {view === "fleet" && !editVehicle && (
-              <FleetView
-                vehicles={vehicles} expenses={expenses} odometer={odometer} getExp={getExp}
-                onAddVehicle={openNewVehicle}
-                onEditVehicle={(v) => { closeForms(); setEditVehicle(v); }}
-                onDeleteVehicle={delVehicle}
-                onNewExpense={openNewExpense}
-                onNewOdometer={openNewOdometer}
-              />
-            )}
+            {view === "fleet" &&
+              !editVehicle && (
+                <FleetView
+                  vehicles={
+                    vehicles
+                  }
+                  expenses={
+                    expenses
+                  }
+                  odometer={
+                    odometer
+                  }
+                  getExp={
+                    getExp
+                  }
+                  onAddVehicle={
+                    openNewVehicle
+                  }
+                  onEditVehicle={(
+                    v
+                  ) => {
+                    closeForms();
+                    setEditVehicle(
+                      v
+                    );
+                  }}
+                  onDeleteVehicle={
+                    delVehicle
+                  }
+                  onSellVehicle={
+                    sellVehicle
+                  }
+                  onReactivateVehicle={
+                    reactivateVehicle
+                  }
+                  onNewExpense={
+                    openNewExpense
+                  }
+                  onNewOdometer={
+                    openNewOdometer
+                  }
+                />
+              )}
 
-            {view === "settings" && !formOpen && (
-              <SettingsView
-                fuelPrices={fuelPrices}
-                setFuelPrices={(fp) => update({ fuelPrices: fp })}
-                fuelTypes={fuelTypes}
-                setFuelTypes={(ft) => update({ fuelTypes: ft })}
-                expenses={expenses}
-                setExpenses={updateExpenses}
-                fuelHistory={fuelHistory}
-                setFuelHistory={(fn) => update((p) => ({ ...p, fuelHistory: typeof fn === "function" ? fn(p.fuelHistory) : fn }))}
-                taxes={taxes}
-                setTaxes={(t) => update({ taxes: t })}
-                toast={toast}
-                onImport={importData}
-              />
-            )}
+            {view === "settings" &&
+              !formOpen && (
+                <SettingsView
+                  fuelPrices={
+                    fuelPrices
+                  }
+                  setFuelPrices={(
+                    fp
+                  ) =>
+                    update({
+                      fuelPrices:
+                        fp,
+                    })
+                  }
+                  fuelTypes={
+                    fuelTypes
+                  }
+                  setFuelTypes={(
+                    ft
+                  ) =>
+                    update({
+                      fuelTypes:
+                        ft,
+                    })
+                  }
+                  expenses={
+                    expenses
+                  }
+                  setExpenses={
+                    updateExpenses
+                  }
+                  fuelHistory={
+                    fuelHistory
+                  }
+                  setFuelHistory={(
+                    fn
+                  ) =>
+                    update(
+                      (p) => ({
+                        ...p,
+                        fuelHistory:
+                          typeof fn ===
+                          "function"
+                            ? fn(
+                                p.fuelHistory
+                              )
+                            : fn,
+                      })
+                    )
+                  }
+                  taxes={taxes}
+                  setTaxes={(t) =>
+                    update({
+                      taxes: t,
+                    })
+                  }
+                  toast={toast}
+                  onImport={
+                    importData
+                  }
+                />
+              )}
           </>
         )}
       </main>
@@ -399,11 +1127,21 @@ export default function App() {
   );
 }
 
-function FormShell({ title, children }) {
+function FormShell({
+  title,
+  children,
+}) {
   return (
     <div className="mb-5">
-      {title && <h2 className="mb-3 text-[15px] font-semibold tracking-tight">{title}</h2>}
+      {title && (
+        <h2 className="mb-3 text-[15px] font-semibold tracking-tight">
+          {title}
+        </h2>
+      )}
+
       {children}
     </div>
   );
 }
+```
+
