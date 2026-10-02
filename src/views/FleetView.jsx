@@ -1,15 +1,14 @@
-```jsx
 import {
   Calendar,
   Car,
-  CheckCircle2,
   Gauge,
   Pencil,
   Plus,
   Receipt,
   Route,
   Trash2,
-  Undo2,
+  BadgeCheck,
+  RotateCcw,
 } from "lucide-react";
 import { VCOLORS } from "@/theme";
 import { $fmt, kmFmt, totalOf, monthlyKm, latestKm } from "@/lib/calc";
@@ -47,41 +46,35 @@ export function FleetView({
 
   const now = new Date();
 
-  // Activos primero y vendidos después
-  const orderedVehicles = [...vehicles].sort((a, b) => {
-    const aSold = Boolean(a.soldAt);
-    const bSold = Boolean(b.soldAt);
+  // Activos primero, vendidos después
+  const sortedVehicles = [...vehicles].sort((a, b) => {
+    if (Boolean(a.soldAt) !== Boolean(b.soldAt)) {
+      return a.soldAt ? 1 : -1;
+    }
 
-    if (aSold !== bSold) return aSold ? 1 : -1;
-
-    return String(a.name || "").localeCompare(String(b.name || ""));
+    return (a.name || "").localeCompare(b.name || "");
   });
 
   return (
     <div className="flex flex-col gap-3">
-      {orderedVehicles.map((v, i) => {
-        const sold = Boolean(v.soldAt);
-
+      {sortedVehicles.map((v, i) => {
         const allExps = getExp(v.id);
         const vColor = VCOLORS[v.colorIdx || 0];
-
-        const kmMonth = sold
-          ? null
-          : monthlyKm(
-              odometer,
-              expenses,
-              v,
-              now.getMonth(),
-              now.getFullYear()
-            );
-
+        const kmMonth = monthlyKm(
+          odometer,
+          expenses,
+          v,
+          now.getMonth(),
+          now.getFullYear()
+        );
         const latest = latestKm(odometer, expenses, v);
+        const sold = Boolean(v.soldAt);
 
         return (
           <Card
             key={v.id}
             className={`animate-rise border-l-4 ${
-              sold ? "opacity-80" : ""
+              sold ? "opacity-75" : ""
             }`}
             style={{
               borderLeftColor: sold ? "var(--danger)" : vColor,
@@ -94,18 +87,12 @@ export function FleetView({
                   <VehicleAvatar v={v} size={46} />
 
                   <div>
-                    <div className="flex flex-wrap items-center gap-2 text-[15px] font-semibold leading-tight">
+                    <div className="flex items-center gap-2 text-[15px] font-semibold leading-tight">
                       {v.name}
 
                       {sold && (
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                          style={{
-                            backgroundColor: "var(--danger-soft)",
-                            color: "var(--danger)",
-                          }}
-                        >
-                          <CheckCircle2 className="size-3" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-danger-soft px-2 py-0.5 text-[10px] font-semibold text-danger">
+                          <BadgeCheck className="size-3" />
                           Vendido
                         </span>
                       )}
@@ -164,9 +151,9 @@ export function FleetView({
                       variant="ghost"
                       size="sm"
                       onClick={() => onSellVehicle(v.id)}
-                      className="text-muted-foreground hover:bg-danger-soft hover:text-danger"
+                      className="text-danger hover:bg-danger-soft hover:text-danger"
                     >
-                      <CheckCircle2 />
+                      <BadgeCheck />
                       Vender
                     </Button>
                   ) : (
@@ -174,9 +161,9 @@ export function FleetView({
                       variant="ghost"
                       size="sm"
                       onClick={() => onReactivateVehicle(v.id)}
-                      className="text-muted-foreground"
+                      className="text-service hover:bg-service-soft hover:text-service"
                     >
-                      <Undo2 />
+                      <RotateCcw />
                       Reactivar
                     </Button>
                   )}
@@ -185,7 +172,7 @@ export function FleetView({
                     variant="ghost"
                     size="icon-sm"
                     onClick={() => onDeleteVehicle(v.id)}
-                    aria-label={`Eliminar definitivamente ${v.name}`}
+                    aria-label={`Eliminar ${v.name}`}
                     className="text-muted-foreground hover:bg-danger-soft hover:text-danger"
                   >
                     <Trash2 />
@@ -194,7 +181,10 @@ export function FleetView({
               </div>
 
               <div className="flex flex-wrap gap-1.5">
-                <Chip icon={Gauge} label={`${kmFmt(latest)} actuales`} />
+                <Chip
+                  icon={Gauge}
+                  label={`${kmFmt(latest)} actuales`}
+                />
 
                 {kmMonth !== null && (
                   <Chip
@@ -212,19 +202,6 @@ export function FleetView({
                   } · ${$fmt(totalOf(allExps))}`}
                 />
               </div>
-
-              {sold && (
-                <div
-                  className="mt-3 rounded-lg px-3 py-2 text-[11px]"
-                  style={{
-                    backgroundColor: "var(--danger-soft)",
-                    color: "var(--danger)",
-                  }}
-                >
-                  Este vehículo está vendido. Se conserva todo su historial,
-                  pero no se pueden cargar nuevos gastos ni kilómetros.
-                </div>
-              )}
             </CardContent>
           </Card>
         );
@@ -233,14 +210,16 @@ export function FleetView({
   );
 }
 
-function formatDate(value) {
-  if (!value) return "";
+function formatDate(date) {
+  if (!date) return "";
 
-  const d = new Date(`${value}T00:00:00`);
+  const parts = date.split("-");
 
-  if (Number.isNaN(d.getTime())) return value;
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
 
-  return d.toLocaleDateString("es-AR");
+  return date;
 }
 
 function Chip({ icon: Icon, label, tone, surface }) {
@@ -257,4 +236,3 @@ function Chip({ icon: Icon, label, tone, surface }) {
     </span>
   );
 }
-```
