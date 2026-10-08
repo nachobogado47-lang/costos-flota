@@ -52,13 +52,13 @@
   --neutral: #4b4a47;
   --neutral-soft: #e8e5de;
 
-  /* Series por vehículo */
-  --v1: #1a5ea8;
-  --v2: #0c6b4a;
-  --v3: #b86b10;
-  --v4: #4e3aab;
-  --v5: #c0393b;
-  --v6: #0c6b6b;
+  /* Series por vehículo — 6 colores muy distintos entre sí */
+  --v1: #1a5ea8;   /* Azul */
+  --v2: #c0393b;   /* Rojo */
+  --v3: #0c7a2e;   /* Verde oscuro */
+  --v4: #d97706;   /* Naranja */
+  --v5: #7c3aed;   /* Violeta */
+  --v6: #0e7490;   /* Celeste petróleo */
 }
 
 .dark {
@@ -103,12 +103,13 @@
   --neutral: #a5a29a;
   --neutral-soft: #2a2622;
 
-  --v1: #6ba3e8;
-  --v2: #4cb891;
-  --v3: #e0a04d;
-  --v4: #9b86e8;
-  --v5: #e05e60;
-  --v6: #4cb0b0;
+  /* Series por vehículo en dark mode — versiones más luminosas */
+  --v1: #6ba3e8;   /* Azul claro */
+  --v2: #f87171;   /* Rojo claro */
+  --v3: #34d399;   /* Verde claro */
+  --v4: #fbbf24;   /* Amarillo-naranja */
+  --v5: #a78bfa;   /* Violeta claro */
+  --v6: #22d3ee;   /* Celeste claro */
 }
 
 @theme inline {
