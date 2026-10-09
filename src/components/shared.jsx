@@ -8,23 +8,16 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip } from "@/components/ui/tooltip";
 
-/** Cifra destacada. La tipografía serif la separa del resto de la interfaz. */
 export function Metric({ label, value, sub, tone, surface, large, className, style }) {
   return (
     <div
       className={cn("rounded-xl p-4", className)}
       style={{ backgroundColor: surface ?? "var(--muted)", ...style }}
     >
-      <div
-        className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em]"
-        style={{ color: tone ?? "var(--muted-foreground)" }}
-      >
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em]" style={{ color: tone ?? "var(--muted-foreground)" }}>
         {label}
       </div>
-      <div
-        className={cn("font-display leading-none tabular", large ? "text-[32px]" : "text-2xl")}
-        style={{ color: tone ?? "var(--foreground)" }}
-      >
+      <div className={cn("font-display leading-none tabular", large ? "text-[32px]" : "text-2xl")} style={{ color: tone ?? "var(--foreground)" }}>
         {value}
       </div>
       {sub && <div className="mt-1.5 text-[11px] text-muted-foreground">{sub}</div>}
@@ -34,14 +27,22 @@ export function Metric({ label, value, sub, tone, surface, large, className, sty
 
 export function VehicleAvatar({ v, size = 38 }) {
   const c = VCOLORS[v.colorIdx || 0];
+  if (v.photo) {
+    return (
+      <img
+        src={v.photo}
+        alt={`Foto de ${v.name}`}
+        className="shrink-0 rounded-[30%] object-cover"
+        style={{ width: size, height: size, border: `1.5px solid color-mix(in oklab, ${c} 26%, transparent)` }}
+        aria-hidden
+      />
+    );
+  }
   return (
     <div
       className="flex shrink-0 items-center justify-center rounded-[30%] font-semibold"
       style={{
-        width: size,
-        height: size,
-        fontSize: size * 0.34,
-        color: c,
+        width: size, height: size, fontSize: size * 0.34, color: c,
         backgroundColor: `color-mix(in oklab, ${c} 14%, transparent)`,
         border: `1.5px solid color-mix(in oklab, ${c} 26%, transparent)`,
       }}
@@ -52,7 +53,6 @@ export function VehicleAvatar({ v, size = 38 }) {
   );
 }
 
-/** Icono de categoría sobre su superficie. */
 export function CategoryIcon({ type, size = "md" }) {
   const c = cat(type);
   const px = size === "sm" ? 26 : 32;
@@ -67,11 +67,9 @@ export function CategoryIcon({ type, size = "md" }) {
   );
 }
 
-/** Ranking horizontal de categorías por monto. */
 export function CategoryBars({ items, total }) {
   const sorted = items.filter((i) => i.amount > 0).sort((a, b) => b.amount - a.amount);
   if (!sorted.length) return null;
-
   return (
     <div className="flex flex-col gap-3">
       {sorted.map((i, idx) => {
@@ -86,9 +84,7 @@ export function CategoryBars({ items, total }) {
               </span>
               <span className="text-[13px] font-semibold tabular">
                 {$fmt(i.amount)}
-                <span className="ml-1 text-[11px] font-normal text-muted-foreground">
-                  {pct.toFixed(0)}%
-                </span>
+                <span className="ml-1 text-[11px] font-normal text-muted-foreground">{pct.toFixed(0)}%</span>
               </span>
             </div>
             <Progress value={pct} tone={c.tone} label={`${c.label}: ${pct.toFixed(0)}%`} />
@@ -103,18 +99,11 @@ export function RowActions({ onEdit, onDelete, editLabel = "Editar", deleteLabel
   return (
     <div className="flex shrink-0 gap-1">
       <Tooltip label={editLabel}>
-        <Button variant="ghost" size="icon-sm" onClick={onEdit} aria-label={editLabel}>
-          <Pencil />
-        </Button>
+        <Button variant="ghost" size="icon-sm" onClick={onEdit} aria-label={editLabel}><Pencil /></Button>
       </Tooltip>
       <Tooltip label={deleteLabel}>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onDelete}
-          aria-label={deleteLabel}
-          className="text-muted-foreground hover:bg-danger-soft hover:text-danger"
-        >
+        <Button variant="ghost" size="icon-sm" onClick={onDelete} aria-label={deleteLabel}
+          className="text-muted-foreground hover:bg-danger-soft hover:text-danger">
           <Trash2 />
         </Button>
       </Tooltip>
@@ -122,15 +111,12 @@ export function RowActions({ onEdit, onDelete, editLabel = "Editar", deleteLabel
   );
 }
 
-/** Variación porcentual contra el período anterior. */
 export function Delta({ pct }) {
   if (pct === null || !Number.isFinite(pct)) return null;
   const up = pct > 0;
   const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <div
-      className={cn("flex items-center justify-end gap-1 text-[11px] font-medium", up ? "text-danger" : "text-service")}
-    >
+    <div className={cn("flex items-center justify-end gap-1 text-[11px] font-medium", up ? "text-danger" : "text-service")}>
       <Icon className="size-3" aria-hidden />
       {Math.abs(pct).toFixed(0)}% vs mes anterior
     </div>
@@ -162,14 +148,10 @@ export function EmptyState({ icon: Icon, title, hint, children }) {
 }
 
 const SYNC = {
-  syncing: { Icon: Loader2,   text: "Guardando",        cls: "text-muted-foreground", spin: true,
-             tip: "Enviando los cambios a la base de datos." },
-  synced:  { Icon: Cloud,     text: "Guardado",          cls: "text-service",
-             tip: "Sincronizado con la base de datos." },
-  local:   { Icon: HardDrive, text: "Solo este equipo",  cls: "text-repair",
-             tip: "No hay base conectada: los datos viven en este navegador." },
-  error:   { Icon: CloudOff,  text: "Sin sincronizar",   cls: "text-danger",
-             tip: "No se pudo guardar en la base. Los datos están a salvo en este navegador." },
+  syncing: { Icon: Loader2,   text: "Guardando",       cls: "text-muted-foreground", spin: true,  tip: "Enviando los cambios a la base de datos." },
+  synced:  { Icon: Cloud,     text: "Guardado",         cls: "text-service",                       tip: "Sincronizado con la base de datos." },
+  local:   { Icon: HardDrive, text: "Solo este equipo", cls: "text-repair",                        tip: "No hay base conectada: los datos viven en este navegador." },
+  error:   { Icon: CloudOff,  text: "Sin sincronizar",  cls: "text-danger",                        tip: "No se pudo guardar en la base. Los datos están a salvo en este navegador." },
 };
 
 export function SyncBadge({ state }) {
@@ -184,10 +166,6 @@ export function SyncBadge({ state }) {
     </Tooltip>
   );
 }
-
-/* ── Skeletons ─────────────────────────────────────────────────────────────
-   Reproducen la silueta real de cada vista para que al llegar los datos no
-   haya salto de layout. */
 
 export function MetricsSkeleton({ count = 4 }) {
   return (
@@ -228,9 +206,7 @@ export function VehicleCardSkeleton() {
 export function ListSkeleton({ rows = 5 }) {
   return (
     <div className="space-y-2">
-      {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className="h-16 rounded-xl" />
-      ))}
+      {Array.from({ length: rows }, (_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
     </div>
   );
 }
